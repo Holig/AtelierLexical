@@ -1313,11 +1313,13 @@ input, textarea, select {
   z-index: 99999;
   width: 420px;
   max-width: min(440px, 90vw);
-  background: var(--bg-surface);
+  background: var(--bg-surface) !important;
+  background-color: var(--bg-surface) !important;
+  opacity: 1 !important;
   border: 1px solid var(--border-highlight);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.42), 0 2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.25);
   pointer-events: auto;
   display: flex;
   flex-direction: column;
@@ -1325,6 +1327,34 @@ input, textarea, select {
   /* La hauteur s'adapte naturellement sans être bloquée arbitrairement */
   height: auto;
   box-sizing: border-box;
+}
+
+[data-theme='light'] .definition-hover-tooltip,
+[data-theme='light'] .definition-hover-tooltip-portal {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(180, 83, 9, 0.35);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18), 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .definition-hover-tooltip::before,
+[data-theme='light'] .definition-hover-tooltip-portal::before {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+[data-theme='dark'] .definition-hover-tooltip,
+[data-theme='dark'] .definition-hover-tooltip-portal {
+  background: #131720 !important;
+  background-color: #131720 !important;
+  border: 1px solid rgba(217, 119, 6, 0.45);
+  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.65), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='dark'] .definition-hover-tooltip::before,
+[data-theme='dark'] .definition-hover-tooltip-portal::before {
+  background: #131720 !important;
+  background-color: #131720 !important;
 }
 
 /* Pont invisible pour maintenir le survol entre le bouton et l'infobulle */

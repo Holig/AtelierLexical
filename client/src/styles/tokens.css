@@ -36,6 +36,30 @@
   --color-intensity-2: #3b82f6; /* Bleu cobalt (Modérée/Usuelle) */
   --color-intensity-3: #f59e0b; /* Ambre doré (Forte/Soutenue) */
   --color-intensity-4: #ef4444; /* Rouge cramoisi (Paroxystique/Extrême) */
+
+  /* Fallback surfaces & textes (Clair par défaut) */
+  --bg-app: #fbf9f5;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f4eee3;
+  --bg-surface-glass: rgba(255, 255, 255, 0.85);
+  --bg-input: #f8f5ee;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-medium: rgba(0, 0, 0, 0.12);
+  --border-highlight: rgba(180, 83, 9, 0.35);
+  --text-main: #1c1917;
+  --text-muted: #57534e;
+  --text-faint: #a8a29e;
+  --text-accent: #b45309;
+  --accent-gold: #b45309;
+  --accent-gold-light: #d97706;
+  --accent-gold-glow: rgba(180, 83, 9, 0.12);
+  --accent-bronze: #78350f;
+  --badge-bg: rgba(0, 0, 0, 0.04);
+  --badge-border: rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
+  --shadow-gold: 0 4px 20px rgba(180, 83, 9, 0.15);
 }
 
 /* Thème Sombre : Bibliothèque nocturne, cuir, encre et or */

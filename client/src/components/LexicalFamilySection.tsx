@@ -170,7 +170,6 @@ export const LexicalFamilySection: React.FC<LexicalFamilySectionProps> = ({
               onClick={() => onNavigateWord(item.mot)}
               onMouseEnter={(e) => handleWordMouseEnter(item, e)}
               onMouseLeave={handleWordMouseLeave}
-              title={`Explorer la fiche morphologique de « ${item.mot} »`}
             >
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>

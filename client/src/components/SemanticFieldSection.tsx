@@ -241,7 +241,6 @@ export const SemanticFieldSection: React.FC<SemanticFieldSectionProps> = ({
               onClick={() => onNavigateWord(elem.mot)}
               onMouseEnter={(e) => handleChipMouseEnter(elem, e)}
               onMouseLeave={handleChipMouseLeave}
-              title={elem.note || `Survoler pour un aperçu ou cliquer pour explorer « ${elem.mot} »`}
             >
               <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{elem.mot}</span>
               {elem.estGenereIA && (
@@ -260,111 +259,119 @@ export const SemanticFieldSection: React.FC<SemanticFieldSectionProps> = ({
       {hoveredData && typeof document !== 'undefined' && createPortal(
         <div
           ref={tooltipRef}
-          className="family-word-tooltip animate-fade-in"
+          className={`definition-hover-tooltip-portal animate-fade-in ${hoveredData.placement === 'above' ? 'tooltip-above' : ''}`}
           style={{
             position: 'fixed',
-            left: `${tooltipLeft}px`,
-            top: hoveredData.placement === 'below'
-              ? `${hoveredData.rect.bottom + 8}px`
-              : `${hoveredData.rect.top - 8}px`,
-            transform: hoveredData.placement === 'above' ? 'translateY(-100%)' : 'none',
-            width: `${Math.min(420, window.innerWidth - 32)}px`,
+            top: hoveredData.placement === 'below' ? hoveredData.rect.bottom + 8 : undefined,
+            bottom: hoveredData.placement === 'above' ? (window.innerHeight - hoveredData.rect.top) + 8 : undefined,
+            left: tooltipLeft,
+            width: Math.min(420, window.innerWidth - 32),
+            maxHeight: hoveredData.maxHeight,
             zIndex: 99999,
-            pointerEvents: 'auto'
+            ['--tooltip-arrow-left' as any]: `${arrowLeft}px`,
+            ['--tooltip-arrow-right' as any]: 'auto',
           }}
           onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}
-          onMouseDown={() => { isInteractingRef.current = true; }}
-          onMouseUp={() => { isInteractingRef.current = false; }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            isInteractingRef.current = true;
+            if (closeTimerRef.current) {
+              clearTimeout(closeTimerRef.current);
+              closeTimerRef.current = null;
+            }
+          }}
+          onMouseUp={(e) => {
+            e.stopPropagation();
+            isInteractingRef.current = false;
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigateWord(hoveredData.elem.mot);
+            setHoveredData(null);
+          }}
+          role="tooltip"
         >
-          {/* Flèche d'orientation */}
-          <div
-            className={`tooltip-arrow ${hoveredData.placement}`}
-            style={{ left: `${arrowLeft}px` }}
-          />
-
-          <div
-            className="tooltip-content-box"
-            style={{
-              maxHeight: `${hoveredData.maxHeight}px`,
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            {/* En-tête de l'infobulle */}
-            <div className="tooltip-header" style={{ flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="tooltip-title">{hoveredData.elem.mot}</span>
-                {cachedFiche?.prononciationApi && (
-                  <span className="tooltip-phonetic">\{cachedFiche.prononciationApi}\</span>
-                )}
-                {hoveredData.elem.estGenereIA && (
-                  <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>IA</span>
-                )}
-              </div>
-              <span className="badge badge-gold" style={{ fontSize: '0.74rem' }}>
-                {hoveredData.elem.theme || hoveredData.elem.relationType || 'champ lexical'}
+          {/* En-tête de l'infobulle : mot, phonétique et badge */}
+          <div className="tooltip-header" style={{ justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Network size={14} className="text-accent" />
+              <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'none', letterSpacing: 'normal' }}>
+                {hoveredData.elem.mot}
               </span>
-            </div>
-
-            {/* Note ou domaine d'évocation */}
-            {hoveredData.elem.note && (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-accent)', marginBottom: '8px', fontStyle: 'italic' }}>
-                « {hoveredData.elem.note} »
-              </div>
-            )}
-
-            {/* Corps défilable de l'infobulle */}
-            <div
-              className="tooltip-scroll-body"
-              style={{
-                overflowY: 'auto',
-                flex: 1,
-                paddingRight: '4px'
-              }}
-            >
-              {isLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  <Sparkles size={16} className="animate-spin text-accent" />
-                  <span>Chargement des définitions...</span>
-                </div>
-              ) : cachedFiche && cachedFiche.definitions.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {cachedFiche.definitions.slice(0, 3).map((def, idx) => (
-                    <div key={def.id || idx} style={{ fontSize: '0.86rem', lineHeight: 1.45 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--accent-gold)', fontSize: '0.82rem' }}>
-                          {idx + 1}.
-                        </span>
-                        {def.categorie && (
-                          <span className="badge" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
-                            {def.categorie}
-                          </span>
-                        )}
-                        <span style={{ color: 'var(--text-main)' }}>{def.definition}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0' }}>
-                  Terme du champ lexical associé à l’univers de « {motPrincipal || 'votre recherche'} ».
-                </p>
+              {hoveredData.elem.estGenereIA && (
+                <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>IA</span>
               )}
             </div>
+            {cachedFiche?.phonetique && (
+              <span className="word-phonetic-badge" style={{ fontSize: '0.75rem', padding: '1px 8px' }}>
+                {cachedFiche.phonetique}
+              </span>
+            )}
+          </div>
 
-            {/* Pied de l'infobulle avec lien direct */}
-            <div
-              className="tooltip-footer-action"
-              onClick={() => {
-                setHoveredData(null);
-                onNavigateWord(hoveredData.elem.mot);
-              }}
-              style={{ flexShrink: 0 }}
-            >
-              <BookOpen size={13} />
-              <span>Consulter la fiche lexicale complète ›</span>
+          {/* Badges de domaine / relation et catégorie grammaticale */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+            <span className="badge badge-gold" style={{ fontSize: '0.72rem' }}>
+              {hoveredData.elem.theme || hoveredData.elem.relationType || 'Champ lexical'}
+            </span>
+            {cachedFiche?.nature && (
+              <span className="badge" style={{ fontSize: '0.72rem' }}>
+                {cachedFiche.nature}
+              </span>
+            )}
+            {hoveredData.elem.note && (
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-accent)', fontStyle: 'italic' }}>
+                « {hoveredData.elem.note} »
+              </span>
+            )}
+          </div>
+
+          {/* Corps défilable : définitions et exemples */}
+          {isLoading ? (
+            <div style={{ padding: '12px 6px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+              <Sparkles size={14} className="text-accent animate-pulse" />
+              <span>Consultation du dictionnaire pour « {hoveredData.elem.mot} »...</span>
             </div>
+          ) : cachedFiche && cachedFiche.definitions && cachedFiche.definitions.length > 0 ? (
+            <div className="tooltip-quotes-list" onWheel={(e) => e.stopPropagation()}>
+              {cachedFiche.definitions.slice(0, 3).map((def, idx) => (
+                <div key={def.id || idx} className="tooltip-quote-item">
+                  <p className="tooltip-quote-text" style={{ fontStyle: 'normal', color: 'var(--text-main)', fontSize: '0.86rem' }}>
+                    <strong style={{ color: 'var(--accent-gold)', marginRight: '5px' }}>{idx + 1}.</strong>
+                    {def.categorie && (
+                      <span className="badge" style={{ fontSize: '0.65rem', padding: '1px 5px', marginRight: '5px', verticalAlign: 'middle' }}>
+                        {def.categorie}
+                      </span>
+                    )}
+                    <span>{def.definition}</span>
+                  </p>
+                  {def.exemples && def.exemples[0] && (
+                    <p className="tooltip-quote-text" style={{ marginTop: '4px', fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      « {def.exemples[0].texte} »
+                      {def.exemples[0].source && (
+                        <span className="tooltip-quote-source">— {def.exemples[0].source}</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="tooltip-definition-preview">
+              {hoveredData.elem.note
+                ? `Association : ${hoveredData.elem.note}. Terme relié à l’univers de « ${motPrincipal || 'votre recherche'} ».'`
+                : `Terme du champ lexical associé à l’univers de « ${motPrincipal || 'votre recherche'} ».'`}
+            </p>
+          )}
+
+          {/* Pied interactif */}
+          <div className="tooltip-footer" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--text-accent)' }}>
+              <BookOpen size={12} />
+              <span>Consulter la fiche complète</span>
+            </span>
+            <span>💡 Cliquer pour explorer ↗</span>
           </div>
         </div>,
         document.body
