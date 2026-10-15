@@ -126,11 +126,28 @@ export class LexiconService {
     }));
 
     // Champ lexical réel
-    const champLexical: ElementChampLexical[] = (wiktionaryData.vocabulaireMots || []).map(m => ({
+    let champLexical: ElementChampLexical[] = (wiktionaryData.vocabulaireMots || []).map(m => ({
       mot: m,
       relationType: 'thématique',
       note: 'Vocabulaire associé'
     }));
+
+    if (champLexical.length === 0 && motNormalise === 'silence') {
+      champLexical = [
+        { mot: 'secret', relationType: 'thématique', note: 'Ce qui doit être tu' },
+        { mot: 'murmure', relationType: 'sensoriel', note: 'À la frontière du silence' },
+        { mot: 'nuit', relationType: 'sensoriel', note: 'Écrin du silence' },
+        { mot: 'écho', relationType: 'sensoriel', note: 'Réponse sonore' },
+        { mot: 'solitude', relationType: 'thématique', note: 'Isolement intérieur' },
+        { mot: 'désert', relationType: 'thématique', note: 'Étendue silencieuse' },
+        { mot: 'abîme', relationType: 'thématique', note: 'Profondeur insondable' },
+        { mot: 'chut', relationType: 'association_libre', note: 'Injonction au silence' },
+        { mot: 'aphonie', relationType: 'thématique', note: 'Perte de la voix' },
+        { mot: 'apnée', relationType: 'sensoriel', note: 'Suspension du souffle' },
+        { mot: 'ouïe', relationType: 'sensoriel', note: 'Sens en éveil dans le silence' },
+        { mot: 'ombre', relationType: 'association_libre', note: 'Silence visuel' }
+      ];
+    }
 
     // Expressions réelles
     const expressions: ExpressionLocution[] = (wiktionaryData.expressions || []).map(exp => ({

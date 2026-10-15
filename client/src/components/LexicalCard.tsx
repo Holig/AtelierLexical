@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { FicheLexicale } from '../../../shared/types';
+import { FicheLexicale, SynonymeNuance, Antonyme, ElementChampLexical } from '../../../shared/types';
 import { StorageService } from '../services/storage.service';
+import { ApiClient } from '../services/api';
 import { DefinitionsSection } from './DefinitionsSection';
 import { SynonymsNuanceSection } from './SynonymsNuanceSection';
 import { AntonymsSection } from './AntonymsSection';
@@ -34,6 +35,8 @@ interface LexicalCardProps {
   navigationTrail?: string[];
   onGoBack?: () => void;
   onNavigateTrailIndex?: (index: number) => void;
+  onOpenAiModal?: () => void;
+  onUpdateFiche?: (fiche: FicheLexicale) => void;
 }
 
 export const LexicalCard: React.FC<LexicalCardProps> = ({
@@ -44,7 +47,9 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
   columns = 2,
   navigationTrail,
   onGoBack,
-  onNavigateTrailIndex
+  onNavigateTrailIndex,
+  onOpenAiModal,
+  onUpdateFiche
 }) => {
   const [showConjugation, setShowConjugation] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -86,6 +91,33 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleEnrichirSynonymes = (nouveaux: SynonymeNuance[]) => {
+    const updated: FicheLexicale = {
+      ...fiche,
+      synonymes: [...fiche.synonymes, ...nouveaux]
+    };
+    ApiClient.setCachedFiche(fiche.mot, updated);
+    onUpdateFiche?.(updated);
+  };
+
+  const handleEnrichirAntonymes = (nouveaux: Antonyme[]) => {
+    const updated: FicheLexicale = {
+      ...fiche,
+      antonymes: [...fiche.antonymes, ...nouveaux]
+    };
+    ApiClient.setCachedFiche(fiche.mot, updated);
+    onUpdateFiche?.(updated);
+  };
+
+  const handleEnrichirChampLexical = (nouveaux: ElementChampLexical[]) => {
+    const updated: FicheLexicale = {
+      ...fiche,
+      champLexical: [...fiche.champLexical, ...nouveaux]
+    };
+    ApiClient.setCachedFiche(fiche.mot, updated);
+    onUpdateFiche?.(updated);
   };
 
   return (
@@ -266,11 +298,17 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
             <SynonymsNuanceSection
               synonymes={fiche.synonymes}
               onNavigateWord={onNavigateWord}
+              motPrincipal={fiche.mot}
+              onEnrichirSynonymes={handleEnrichirSynonymes}
+              onOpenAiModal={onOpenAiModal}
             />
 
             <AntonymsSection
               antonymes={fiche.antonymes}
               onNavigateWord={onNavigateWord}
+              motPrincipal={fiche.mot}
+              onEnrichirAntonymes={handleEnrichirAntonymes}
+              onOpenAiModal={onOpenAiModal}
             />
           </div>
         )}
@@ -283,6 +321,9 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
         <SemanticFieldSection
           champLexical={fiche.champLexical}
           onNavigateWord={onNavigateWord}
+          motPrincipal={fiche.mot}
+          onEnrichirChampLexical={handleEnrichirChampLexical}
+          onOpenAiModal={onOpenAiModal}
         />
 
         <ExpressionsSection expressions={fiche.expressions} />

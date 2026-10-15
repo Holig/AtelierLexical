@@ -3,7 +3,10 @@ import {
   FicheConjugaison,
   IntentionRecherche,
   ReponseAtelierStylistique,
-  ExempleUsage
+  ExempleUsage,
+  SynonymeNuance,
+  Antonyme,
+  ElementChampLexical
 } from '../../../shared/types';
 
 // Cache mémoire en session pour les fiches lexicales (permet une navigation instantanée sans rechargement)
@@ -113,6 +116,45 @@ export class ApiClient {
     });
     if (!res.ok) {
       return { success: false, message: `Erreur HTTP ${res.status}` };
+    }
+    return res.json();
+  }
+
+  public static async enrichirSynonymes(mot: string, existants: string[]): Promise<SynonymeNuance[]> {
+    const res = await fetch('/api/stylistique/enrichir-synonymes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mot, existants })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Erreur lors de l’enrichissement des synonymes');
+    }
+    return res.json();
+  }
+
+  public static async enrichirAntonymes(mot: string, existants: string[]): Promise<Antonyme[]> {
+    const res = await fetch('/api/stylistique/enrichir-antonymes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mot, existants })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Erreur lors de l’enrichissement des antonymes');
+    }
+    return res.json();
+  }
+
+  public static async enrichirChampLexical(mot: string, existants: string[]): Promise<ElementChampLexical[]> {
+    const res = await fetch('/api/stylistique/enrichir-champ-lexical', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mot, existants })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Erreur lors de l’enrichissement du champ lexical');
     }
     return res.json();
   }

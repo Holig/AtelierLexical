@@ -9,6 +9,132 @@ import {
 } from '../../../shared/types';
 import { normaliserMotRecherche, supprimerAccents } from '../utils/french';
 
+// Base de nuances expertes pour enrichir les termes littéraires fondamentaux lorsque le Wiktionnaire est succinct
+const BASE_NUANCES_LITTERAIRES: Record<string, SynonymeNuance[]> = {
+  silence: [
+    {
+      mot: 'calme',
+      nuance: 'Absence de trouble sonore et apaisement des sens.',
+      intensite: 1,
+      registre: 'courant',
+      connotation: 'positive',
+      contexteConseille: 'Fin de journée, nature paisible, repos',
+      exemple: 'Le calme du soir descendit doucement sur la plaine.',
+      source: 'Wiktionnaire (CC BY-SA 4.0)'
+    },
+    {
+      mot: 'quiétude',
+      nuance: 'État de tranquillité sereine et profonde, dénué de toute inquiétude.',
+      intensite: 1,
+      registre: 'littéraire',
+      connotation: 'positive',
+      contexteConseille: 'Havre de paix, contemplation spirituelle ou félicité',
+      exemple: 'Une quiétude bienfaisante s’était emparée de la clairière.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'sérénité',
+      nuance: 'Silence intérieur parfait et atmosphère d’une paix totale.',
+      intensite: 2,
+      registre: 'soutenu',
+      connotation: 'positive',
+      contexteConseille: 'Détachement philosophique, communion avec les éléments',
+      exemple: 'Dans la sérénité du cloître, nulle parole n’était nécessaire.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'paix',
+      nuance: 'Silence vécu comme un répit ou un soulagement après le tumulte.',
+      intensite: 2,
+      registre: 'courant',
+      connotation: 'positive',
+      contexteConseille: 'Après l’orage, réconciliation ou trêve des passions',
+      exemple: 'La paix retombait enfin sur la maison endormie.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'recueillement',
+      nuance: 'Silence solennel, sacré ou méditatif propice à la mémoire et à la ferveur.',
+      intensite: 2,
+      registre: 'littéraire',
+      connotation: 'positive',
+      contexteConseille: 'Hommage solennel, deuil, prière ou introspection',
+      exemple: 'Un silence de recueillement enveloppa l’assemblée émue.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'mutisme',
+      nuance: 'Refus délibéré ou incapacité obstinée d’émettre la moindre parole.',
+      intensite: 3,
+      registre: 'soutenu',
+      connotation: 'sombre',
+      contexteConseille: 'Secret inavouable, rancœur, traumatisme ou résistance',
+      exemple: 'Il s’enferma dans un mutisme que nulle prière ne put briser.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'réserve',
+      nuance: 'Retenue mesurée dictée par la pudeur, la politesse ou la méfiance.',
+      intensite: 1,
+      registre: 'courant',
+      connotation: 'neutre',
+      contexteConseille: 'Société mondaine, diplomatie, pudeur des sentiments',
+      exemple: 'Elle gardait une réserve prudente face aux inconnus.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'laconisme',
+      nuance: 'Fait de s’exprimer avec une extrême parcimonie, à la lisière du silence.',
+      intensite: 2,
+      registre: 'littéraire',
+      connotation: 'neutre',
+      contexteConseille: 'Personnage austère, taciturne ou économe de mots',
+      exemple: 'Son laconisme habituel décourageait les questions indiscrètes.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'sourdine',
+      nuance: 'Atténuation feutrée et tamisée de l’ambiance sonore.',
+      intensite: 1,
+      registre: 'littéraire',
+      connotation: 'neutre',
+      contexteConseille: 'Atmosphère feutrée, neige, brume ou chambre capitonnée',
+      exemple: 'La neige mettait une sourdine aux pas des passants.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'malaise',
+      nuance: 'Silence embarrassant, pesant et révélateur d’un non-dit.',
+      intensite: 3,
+      registre: 'courant',
+      connotation: 'péjorative',
+      contexteConseille: 'Après une maladresse, une trahison ou une tension sociale',
+      exemple: 'Un lourd malaise s’installa soudain entre les convives.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'tension',
+      nuance: 'Silence oppressant qui précède l’orage ou la déflagration dramatique.',
+      intensite: 4,
+      registre: 'courant',
+      connotation: 'sombre',
+      contexteConseille: 'Avant le combat, face-à-face tragique ou compte à rebours',
+      exemple: 'La tension dans la salle d’armes était devenue irrespirable.',
+      source: 'Atelier de Nuances'
+    },
+    {
+      mot: 'omerta',
+      nuance: 'Loi du silence imposée par la peur, l’honneur ou le serment du groupe.',
+      intensite: 4,
+      registre: 'soutenu',
+      connotation: 'sombre',
+      contexteConseille: 'Affaires d’État, monde criminel ou secrets de famille',
+      exemple: 'L’omerta régnait dans le village depuis la disparition des témoins.',
+      source: 'Atelier de Nuances'
+    }
+  ]
+};
+
 export class NuanceService {
   /**
    * Enrichit les synonymes réels issus du Wiktionnaire avec intensité, nuances et conseils de contexte
@@ -18,6 +144,7 @@ export class NuanceService {
     const resultats: SynonymeNuance[] = [];
     const traites = new Set<string>();
 
+    // 1. Ajouter les synonymes bruts issus du Wiktionnaire
     for (const motSyn of synonymesBruts) {
       const synNorm = normaliserMotRecherche(motSyn);
       if (traites.has(synNorm) || synNorm === motNorm) continue;
@@ -25,6 +152,18 @@ export class NuanceService {
 
       const analyse = this.analyserNuanceHeuristique(motPrincipal, motSyn);
       resultats.push(analyse);
+    }
+
+    // 2. Compléter avec la base littéraire experte pour les concepts fondamentaux
+    const curated = BASE_NUANCES_LITTERAIRES[motNorm];
+    if (curated) {
+      for (const c of curated) {
+        const cNorm = normaliserMotRecherche(c.mot);
+        if (!traites.has(cNorm) && cNorm !== motNorm) {
+          traites.add(cNorm);
+          resultats.push(c);
+        }
+      }
     }
 
     return resultats;

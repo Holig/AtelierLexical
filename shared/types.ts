@@ -58,6 +58,7 @@ export interface SynonymeNuance {
   definitionCourte?: string;
   exemple?: string;
   source: string;
+  estGenereIA?: boolean;
 }
 
 export interface Antonyme {
@@ -65,6 +66,7 @@ export interface Antonyme {
   sensAssocie?: string;
   type: 'direct' | 'contextuel';
   source: string;
+  estGenereIA?: boolean;
 }
 
 export interface MotMorphologique {
@@ -79,6 +81,7 @@ export interface ElementChampLexical {
   theme?: string;
   relationType: 'thématique' | 'sensoriel' | 'association_libre';
   note?: string;
+  estGenereIA?: boolean;
 }
 
 export interface ExpressionLocution {

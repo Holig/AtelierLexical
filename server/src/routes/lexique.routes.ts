@@ -133,6 +133,66 @@ lexiqueRouter.get('/stylistique/exemples', async (req: Request, res: Response) =
 });
 
 /**
+ * POST /api/stylistique/enrichir-synonymes
+ * Enrichit la liste des synonymes d'une fiche avec l'IA
+ */
+lexiqueRouter.post('/stylistique/enrichir-synonymes', async (req: Request, res: Response) => {
+  try {
+    const { mot, existants } = req.body;
+    if (!mot || typeof mot !== 'string') {
+      res.status(400).json({ error: 'Le champ « mot » est requis.' });
+      return;
+    }
+    const listeExistants = Array.isArray(existants) ? existants : [];
+    const nouveauxSynonymes = await aiService.enrichirSynonymesIA(mot.trim(), listeExistants);
+    res.json(nouveauxSynonymes);
+  } catch (err) {
+    console.error('Erreur /api/stylistique/enrichir-synonymes:', err);
+    res.status(500).json({ error: 'Erreur lors de l’enrichissement des synonymes par IA.' });
+  }
+});
+
+/**
+ * POST /api/stylistique/enrichir-antonymes
+ * Enrichit la liste des antonymes d'une fiche avec l'IA
+ */
+lexiqueRouter.post('/stylistique/enrichir-antonymes', async (req: Request, res: Response) => {
+  try {
+    const { mot, existants } = req.body;
+    if (!mot || typeof mot !== 'string') {
+      res.status(400).json({ error: 'Le champ « mot » est requis.' });
+      return;
+    }
+    const listeExistants = Array.isArray(existants) ? existants : [];
+    const nouveauxAntonymes = await aiService.enrichirAntonymesIA(mot.trim(), listeExistants);
+    res.json(nouveauxAntonymes);
+  } catch (err) {
+    console.error('Erreur /api/stylistique/enrichir-antonymes:', err);
+    res.status(500).json({ error: 'Erreur lors de l’enrichissement des antonymes par IA.' });
+  }
+});
+
+/**
+ * POST /api/stylistique/enrichir-champ-lexical
+ * Enrichit le champ lexical d'une fiche avec l'IA
+ */
+lexiqueRouter.post('/stylistique/enrichir-champ-lexical', async (req: Request, res: Response) => {
+  try {
+    const { mot, existants } = req.body;
+    if (!mot || typeof mot !== 'string') {
+      res.status(400).json({ error: 'Le champ « mot » est requis.' });
+      return;
+    }
+    const listeExistants = Array.isArray(existants) ? existants : [];
+    const nouveauxChamps = await aiService.enrichirChampLexicalIA(mot.trim(), listeExistants);
+    res.json(nouveauxChamps);
+  } catch (err) {
+    console.error('Erreur /api/stylistique/enrichir-champ-lexical:', err);
+    res.status(500).json({ error: 'Erreur lors de l’enrichissement du champ lexical par IA.' });
+  }
+});
+
+/**
  * GET /api/config/ai-status
  * Retourne l'état de configuration de l'IA (sans révéler la clé)
  */

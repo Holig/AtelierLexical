@@ -342,6 +342,8 @@ export const App: React.FC = () => {
                 navigationTrail={navigationTrail}
                 onGoBack={handleGoBack}
                 onNavigateTrailIndex={handleNavigateTrailIndex}
+                onOpenAiModal={() => setShowAiModal(true)}
+                onUpdateFiche={(updated) => setCurrentFiche(updated)}
               />
             )}
 
