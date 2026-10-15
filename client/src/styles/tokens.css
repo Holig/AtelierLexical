@@ -1,0 +1,101 @@
+/**
+ * Design Tokens — Atelier Lexical
+ * Palette noble et littéraire inspirée des grandes reliures, du vélin et des bibliothèques contemporaines
+ */
+
+:root {
+  /* Typographie */
+  --font-serif-display: 'Cinzel', 'Cormorant Garamond', Georgia, serif;
+  --font-serif-body: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Espacements */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+
+  /* Rayons de bordure */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Intensités lexicales */
+  --color-intensity-1: #10b981; /* Vert émeraude (Faible/Atténuée) */
+  --color-intensity-2: #3b82f6; /* Bleu cobalt (Modérée/Usuelle) */
+  --color-intensity-3: #f59e0b; /* Ambre doré (Forte/Soutenue) */
+  --color-intensity-4: #ef4444; /* Rouge cramoisi (Paroxystique/Extrême) */
+}
+
+/* Thème Sombre : Bibliothèque nocturne, cuir, encre et or */
+[data-theme='dark'] {
+  --bg-app: #0c0f14;
+  --bg-surface: #131720;
+  --bg-surface-elevated: #1a202c;
+  --bg-surface-glass: rgba(26, 32, 44, 0.75);
+  --bg-input: #171d27;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.14);
+  --border-highlight: rgba(217, 119, 6, 0.4);
+
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+  --text-accent: #fbbf24;
+
+  --accent-gold: #d97706;
+  --accent-gold-light: #fbbf24;
+  --accent-gold-glow: rgba(245, 158, 11, 0.15);
+  --accent-bronze: #92400e;
+
+  --badge-bg: rgba(255, 255, 255, 0.06);
+  --badge-border: rgba(255, 255, 255, 0.1);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --shadow-gold: 0 4px 20px rgba(217, 119, 6, 0.2);
+}
+
+/* Thème Clair : Atelier sur papier vélin, encres sépia et or bruni */
+[data-theme='light'] {
+  --bg-app: #fbf9f5;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f4eee3;
+  --bg-surface-glass: rgba(255, 255, 255, 0.85);
+  --bg-input: #f8f5ee;
+
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-medium: rgba(0, 0, 0, 0.12);
+  --border-highlight: rgba(180, 83, 9, 0.35);
+
+  --text-main: #1c1917;
+  --text-muted: #57534e;
+  --text-faint: #a8a29e;
+  --text-accent: #b45309;
+
+  --accent-gold: #b45309;
+  --accent-gold-light: #d97706;
+  --accent-gold-glow: rgba(180, 83, 9, 0.12);
+  --accent-bronze: #78350f;
+
+  --badge-bg: rgba(0, 0, 0, 0.04);
+  --badge-border: rgba(0, 0, 0, 0.08);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
+  --shadow-gold: 0 4px 20px rgba(180, 83, 9, 0.15);
+}
