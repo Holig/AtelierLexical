@@ -6,8 +6,37 @@ import {
   ExempleUsage
 } from '../../../shared/types';
 
+// Cache mémoire en session pour les fiches lexicales (permet une navigation instantanée sans rechargement)
+const fichesMemoryCache = new Map<string, FicheLexicale>();
+
 export class ApiClient {
-  public static async getFicheLexicale(mot: string): Promise<FicheLexicale> {
+  public static getCachedFiche(mot: string): FicheLexicale | undefined {
+    if (!mot) return undefined;
+    const key = mot.toLowerCase().trim();
+    return fichesMemoryCache.get(key);
+  }
+
+  public static setCachedFiche(mot: string, fiche: FicheLexicale): void {
+    if (!mot || !fiche) return;
+    const key = mot.toLowerCase().trim();
+    fichesMemoryCache.set(key, fiche);
+    if (fiche.mot) {
+      fichesMemoryCache.set(fiche.mot.toLowerCase().trim(), fiche);
+    }
+  }
+
+  public static hasCachedFiche(mot: string): boolean {
+    if (!mot) return false;
+    const key = mot.toLowerCase().trim();
+    return fichesMemoryCache.has(key);
+  }
+
+  public static async getFicheLexicale(mot: string, skipCache: boolean = false): Promise<FicheLexicale> {
+    const key = mot.toLowerCase().trim();
+    if (!skipCache && fichesMemoryCache.has(key)) {
+      return fichesMemoryCache.get(key)!;
+    }
+
     const res = await fetch(`/api/lexique/${encodeURIComponent(mot)}`);
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
@@ -16,7 +45,13 @@ export class ApiClient {
       error.suggestions = errData.suggestions || [];
       throw error;
     }
-    return res.json();
+
+    const fiche: FicheLexicale = await res.json();
+    fichesMemoryCache.set(key, fiche);
+    if (fiche.mot) {
+      fichesMemoryCache.set(fiche.mot.toLowerCase().trim(), fiche);
+    }
+    return fiche;
   }
 
   public static async getSuggestions(query: string): Promise<string[]> {

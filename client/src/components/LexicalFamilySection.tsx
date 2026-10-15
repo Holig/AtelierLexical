@@ -77,7 +77,12 @@ export const LexicalFamilySection: React.FC<LexicalFamilySectionProps> = ({
 
     // Récupération asynchrone des détails lexicaux du mot s'il n'est pas encore en cache
     const wordKey = item.mot.toLowerCase().trim();
-    if (!familyWordsCache.has(wordKey)) {
+    const alreadyCached = familyWordsCache.get(wordKey) ?? ApiClient.getCachedFiche(wordKey);
+    if (alreadyCached) {
+      if (!familyWordsCache.has(wordKey)) {
+        familyWordsCache.set(wordKey, alreadyCached);
+      }
+    } else if (!familyWordsCache.has(wordKey)) {
       setLoadingWord(wordKey);
       ApiClient.getFicheLexicale(item.mot)
         .then(fiche => {
@@ -128,7 +133,7 @@ export const LexicalFamilySection: React.FC<LexicalFamilySectionProps> = ({
   }
 
   const activeWordKey = hoveredData?.item.mot.toLowerCase().trim() || '';
-  const cachedFiche = hoveredData ? familyWordsCache.get(activeWordKey) : undefined;
+  const cachedFiche = hoveredData ? (familyWordsCache.get(activeWordKey) ?? ApiClient.getCachedFiche(activeWordKey)) : undefined;
   const isLoading = loadingWord === activeWordKey && cachedFiche === undefined;
 
   return (

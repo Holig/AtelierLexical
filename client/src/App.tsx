@@ -68,6 +68,27 @@ export const App: React.FC = () => {
   const performSearch = async (mot: string, updateHistoryState: boolean = true) => {
     if (!mot || !mot.trim()) return;
     const clean = mot.trim();
+    const key = clean.toLowerCase();
+
+    // 1. VÉRIFICATION DU CACHE EN MÉMOIRE : Résolution instantanée (0 ms, aucun spinner ni rechargement)
+    const cached = ApiClient.getCachedFiche(key);
+    if (cached) {
+      setCurrentWord(cached.mot);
+      setCurrentFiche(cached);
+      setIsLoading(false);
+      setErrorInfo(null);
+      setActiveTab('lexique');
+
+      if (updateHistoryState) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('q', cached.mot);
+        window.history.pushState({ word: cached.mot }, '', url.toString());
+      }
+      StorageService.addToHistory(cached.mot);
+      return;
+    }
+
+    // 2. Si non présent en cache, chargement asynchrone
     setCurrentWord(clean);
     setIsLoading(true);
     setErrorInfo(null);
