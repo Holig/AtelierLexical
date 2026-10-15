@@ -204,7 +204,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
                 <span>Affichage Multi-colonnes & Carnet d'Écrivain</span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                <li><strong>Modes 1, 2 ou 3 colonnes</strong> : disposition panoramique adaptée à votre écran pour comparer simultanément définitions, synonymes empilés et morphologie.</li>
+                <li><strong>Modes 1, 2, 3 ou 4 colonnes</strong> : disposition ultra-large et panoramique adaptée à votre écran pour comparer simultanément définitions, synonymes empilés, morphologie et champ lexical.</li>
                 <li><strong>Déploiement à la demande</strong> : visualisez les définitions sans surcharge, et déroulez les citations littéraires attestées d'un simple clic.</li>
                 <li><strong>Carnet & Projets</strong> : classez vos mots favoris par dossier thématique et exportez vos lexiques au format Markdown (compatible Obsidian, Scrivener, Notion).</li>
               </ul>

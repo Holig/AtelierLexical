@@ -10,14 +10,14 @@ import { Footer } from './components/Footer';
 import { ApiClient } from './services/api';
 import { StorageService } from './services/storage.service';
 import { FicheLexicale } from '../../shared/types';
-import { Feather, Sparkles, BookOpen, AlertCircle, Compass, LayoutGrid, LayoutList, Columns2, Columns3 } from 'lucide-react';
+import { Feather, Sparkles, BookOpen, AlertCircle, Compass, LayoutGrid, LayoutList, Columns2, Columns3, Columns4 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'lexique' | 'studio' | 'notebook'>('lexique');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [currentWord, setCurrentWord] = useState<string>('');
   const [currentFiche, setCurrentFiche] = useState<FicheLexicale | null>(null);
-  const [columns, setColumns] = useState<1 | 2 | 3>(() => StorageService.getColumnsLayout());
+  const [columns, setColumns] = useState<1 | 2 | 3 | 4>(() => StorageService.getColumnsLayout());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorInfo, setErrorInfo] = useState<{ message: string; suggestions?: string[] } | null>(null);
   const [favoritesCount, setFavoritesCount] = useState<number>(0);
@@ -27,7 +27,7 @@ export const App: React.FC = () => {
 
   const [navigationTrail, setNavigationTrail] = useState<string[]>([]);
 
-  const handleSetColumns = (cols: 1 | 2 | 3) => {
+  const handleSetColumns = (cols: 1 | 2 | 3 | 4) => {
     setColumns(cols);
     StorageService.setColumnsLayout(cols);
   };
@@ -248,6 +248,15 @@ export const App: React.FC = () => {
                   >
                     <Columns3 size={14} />
                     <span>3 col</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`layout-switch-btn ${columns === 4 ? 'active' : ''}`}
+                    onClick={() => handleSetColumns(4)}
+                    title="4 colonnes : Vue ultra-large pour grands écrans"
+                  >
+                    <Columns4 size={14} />
+                    <span>4 col</span>
                   </button>
                 </div>
               </div>

@@ -30,7 +30,7 @@ interface LexicalCardProps {
   onNavigateWord: (mot: string) => void;
   isFavorite: boolean;
   onToggleFavorite: () => void;
-  columns?: 1 | 2 | 3;
+  columns?: 1 | 2 | 3 | 4;
   navigationTrail?: string[];
   onGoBack?: () => void;
   onNavigateTrailIndex?: (index: number) => void;

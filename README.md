@@ -45,7 +45,7 @@ L'**Atelier Lexical** est une application web conçue spécialement pour les éc
 - **Confidentialité & Persistance locale** : Aucune création de compte requise, toutes vos notes restent stockées localement dans votre navigateur (`LocalStorage`).
 
 ### 🎛️ Ergonomie & Affichage sur Mesure
-- **Sélecteur de colonnes flexible** : Basculez en 1 clic entre **1 colonne** (vue linéaire), **2 colonnes** (atelier bicolonne) ou **3 colonnes** (vue panoramique grand écran).
+- **Sélecteur de colonnes flexible** : Basculez en 1 clic entre **1 colonne** (vue linéaire), **2 colonnes** (atelier bicolonne), **3 colonnes** (vue panoramique) ou **4 colonnes** (vue ultra-large pour moniteurs haute résolution).
 - **Modes Thématiques** : Thème sombre (*Bibliothèque nocturne*) et thème clair (*Papier vélin*) avec transitions fluides.
 - **Modale « À Propos »** : Accessible directement depuis l'en-tête (bouton information à côté du thème) présentant la vocation et le fonctionnement de l'application sous 2 volets interactifs (*Fonctionnel* et *Technique*).
 - **Module IA Hybride Optionnel** : Compatible Google Gemini et OpenAI pour enrichir les exemples stylistiques, avec persistance sécurisée des clés API et indicateur de statut en temps réel. Fonctionne à 100% sans clé IA requise.

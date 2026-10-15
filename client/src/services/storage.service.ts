@@ -44,15 +44,15 @@ export class StorageService {
     document.documentElement.setAttribute('data-theme', theme);
   }
 
-  public static getColumnsLayout(): 1 | 2 | 3 {
+  public static getColumnsLayout(): 1 | 2 | 3 | 4 {
     const val = localStorage.getItem(STORAGE_KEYS.COLUMNS);
-    if (val === '1' || val === '2' || val === '3') {
-      return Number(val) as 1 | 2 | 3;
+    if (val === '1' || val === '2' || val === '3' || val === '4') {
+      return Number(val) as 1 | 2 | 3 | 4;
     }
     return 2;
   }
 
-  public static setColumnsLayout(cols: 1 | 2 | 3): void {
+  public static setColumnsLayout(cols: 1 | 2 | 3 | 4): void {
     localStorage.setItem(STORAGE_KEYS.COLUMNS, String(cols));
   }
 

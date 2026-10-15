@@ -822,11 +822,18 @@ input, textarea, select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* En modes 2 et 3 colonnes : hauteur égale harmonisée pour les tuiles supérieures */
+/* 4 colonnes : Vue Ultra-Large */
+.lexical-sections-grid.cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* En modes 2, 3 et 4 colonnes : hauteur égale harmonisée pour les tuiles supérieures */
 .lexical-sections-grid.cols-2 > .section-panel:not(.examples-workshop-panel),
 .lexical-sections-grid.cols-3 > .section-panel:not(.examples-workshop-panel),
+.lexical-sections-grid.cols-4 > .section-panel:not(.examples-workshop-panel),
 .lexical-sections-grid.cols-2 > .synonyms-antonyms-stack,
-.lexical-sections-grid.cols-3 > .synonyms-antonyms-stack {
+.lexical-sections-grid.cols-3 > .synonyms-antonyms-stack,
+.lexical-sections-grid.cols-4 > .synonyms-antonyms-stack {
   height: clamp(530px, 62vh, 660px);
   min-height: 530px;
   display: flex;
@@ -835,8 +842,9 @@ input, textarea, select {
 }
 
 .lexical-sections-grid.cols-2 > .section-panel:not(.examples-workshop-panel),
-.lexical-sections-grid.cols-3 > .section-panel:not(.examples-workshop-panel) {
-  padding: 18px 22px;
+.lexical-sections-grid.cols-3 > .section-panel:not(.examples-workshop-panel),
+.lexical-sections-grid.cols-4 > .section-panel:not(.examples-workshop-panel) {
+  padding: 18px 20px;
 }
 
 /* Pile verticale pour Synonymes & Antonymes empilés */
@@ -847,7 +855,8 @@ input, textarea, select {
 }
 
 .lexical-sections-grid.cols-2 > .synonyms-antonyms-stack > .section-panel,
-.lexical-sections-grid.cols-3 > .synonyms-antonyms-stack > .section-panel {
+.lexical-sections-grid.cols-3 > .synonyms-antonyms-stack > .section-panel,
+.lexical-sections-grid.cols-4 > .synonyms-antonyms-stack > .section-panel {
   flex: 1 1 0;
   min-height: 0;
   display: flex;
@@ -870,14 +879,16 @@ input, textarea, select {
 
 /* L'en-tête de la tuile reste toujours visible et fixe en haut de la carte */
 .lexical-sections-grid.cols-2 > .section-panel:not(.examples-workshop-panel) .section-panel-header,
-.lexical-sections-grid.cols-3 > .section-panel:not(.examples-workshop-panel) .section-panel-header {
+.lexical-sections-grid.cols-3 > .section-panel:not(.examples-workshop-panel) .section-panel-header,
+.lexical-sections-grid.cols-4 > .section-panel:not(.examples-workshop-panel) .section-panel-header {
   flex-shrink: 0;
   margin-bottom: 12px;
 }
 
 /* La barre de filtres (dans les synonymes) reste également fixe en haut */
 .lexical-sections-grid.cols-2 > .section-panel:not(.examples-workshop-panel) .filters-bar,
-.lexical-sections-grid.cols-3 > .section-panel:not(.examples-workshop-panel) .filters-bar {
+.lexical-sections-grid.cols-3 > .section-panel:not(.examples-workshop-panel) .filters-bar,
+.lexical-sections-grid.cols-4 > .section-panel:not(.examples-workshop-panel) .filters-bar {
   flex-shrink: 0;
   margin-bottom: var(--space-md);
 }
@@ -971,11 +982,12 @@ input, textarea, select {
 
 /* Mise en valeur de l'Atelier d'exemples sur toute la largeur en multi-colonnes */
 .lexical-sections-grid.cols-2 .examples-workshop-panel,
-.lexical-sections-grid.cols-3 .examples-workshop-panel {
+.lexical-sections-grid.cols-3 .examples-workshop-panel,
+.lexical-sections-grid.cols-4 .examples-workshop-panel {
   grid-column: 1 / -1;
 }
 
-/* Élargissement fluide du conteneur en mode 2 ou 3 colonnes pour une lisibilité maximale */
+/* Élargissement fluide du conteneur en mode 2, 3 ou 4 colonnes pour une lisibilité maximale */
 .main-content:has(.lexical-card-container.cols-2) {
   max-width: 1400px;
 }
@@ -984,21 +996,35 @@ input, textarea, select {
   max-width: 1680px;
 }
 
+.main-content:has(.lexical-card-container.cols-4) {
+  max-width: 1920px;
+}
+
+@media (max-width: 1540px) {
+  .lexical-sections-grid.cols-4 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1200px) {
-  .lexical-sections-grid.cols-3 {
+  .lexical-sections-grid.cols-3,
+  .lexical-sections-grid.cols-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 820px) {
   .lexical-sections-grid.cols-2,
-  .lexical-sections-grid.cols-3 {
+  .lexical-sections-grid.cols-3,
+  .lexical-sections-grid.cols-4 {
     grid-template-columns: 1fr;
   }
   .lexical-sections-grid.cols-2 > .section-panel:not(.examples-workshop-panel),
   .lexical-sections-grid.cols-3 > .section-panel:not(.examples-workshop-panel),
+  .lexical-sections-grid.cols-4 > .section-panel:not(.examples-workshop-panel),
   .lexical-sections-grid.cols-2 > .synonyms-antonyms-stack,
-  .lexical-sections-grid.cols-3 > .synonyms-antonyms-stack {
+  .lexical-sections-grid.cols-3 > .synonyms-antonyms-stack,
+  .lexical-sections-grid.cols-4 > .synonyms-antonyms-stack {
     height: auto;
     max-height: none;
   }
