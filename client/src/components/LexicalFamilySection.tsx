@@ -131,7 +131,7 @@ export const LexicalFamilySection: React.FC<LexicalFamilySectionProps> = ({
           }
 
           return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gridAutoRows: 'min-content', alignContent: 'start', alignItems: 'start', gap: '12px' }}>
               {list.map((item, idx) => {
                 const isHovered = hoveredData?.mot === item.mot;
 
