@@ -1,21 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExempleUsage } from '../../../shared/types';
-import { Feather, RefreshCw, Sparkles, Quote, Copy, Check } from 'lucide-react';
+import { Feather, Sparkles, Loader2, Copy, Check } from 'lucide-react';
 import { ApiClient } from '../services/api';
 
 interface ExamplesWorkshopSectionProps {
   mot: string;
   exemplesInitiaux: ExempleUsage[];
+  onOpenAiModal?: () => void;
+  onEnrichirExemples?: (nouveaux: ExempleUsage[]) => void;
 }
 
 export const ExamplesWorkshopSection: React.FC<ExamplesWorkshopSectionProps> = ({
   mot,
-  exemplesInitiaux
+  exemplesInitiaux,
+  onOpenAiModal,
+  onEnrichirExemples
 }) => {
   const [exemples, setExemples] = useState<ExempleUsage[]>(exemplesInitiaux || []);
   const [filterType, setFilterType] = useState<string>('all');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    setExemples(exemplesInitiaux || []);
+  }, [exemplesInitiaux, mot]);
 
   const handleCopy = (texte: string, idx: number) => {
     navigator.clipboard.writeText(texte);
@@ -24,14 +33,26 @@ export const ExamplesWorkshopSection: React.FC<ExamplesWorkshopSectionProps> = (
   };
 
   const handleGenererVariations = async () => {
+    if (!mot) return;
+    setGenerateError(null);
     setIsGenerating(true);
     try {
+      const status = await ApiClient.getAiStatus();
+      if (!status.isConfigured && onOpenAiModal) {
+        setIsGenerating(false);
+        onOpenAiModal();
+        return;
+      }
+
       const nouveaux = await ApiClient.genererExemples(mot, 'littéraire');
       if (nouveaux && nouveaux.length > 0) {
         setExemples(prev => [...prev, ...nouveaux]);
+        onEnrichirExemples?.(nouveaux);
       }
     } catch (err) {
       console.warn('Erreur génération variations:', err);
+      setGenerateError('Service IA momentanément indisponible.');
+      setTimeout(() => setGenerateError(null), 3000);
     } finally {
       setIsGenerating(false);
     }
@@ -46,24 +67,45 @@ export const ExamplesWorkshopSection: React.FC<ExamplesWorkshopSectionProps> = (
 
   return (
     <div className="section-panel examples-workshop-panel animate-fade-in">
-      <div className="section-panel-header">
-        <h2 className="section-title">
-          <Feather size={20} className="text-accent" />
-          <span>Exemples d'Usage & Tournures Stylistiques</span>
-          <span className="section-count-badge">{exemples.length}</span>
-        </h2>
+      <div className="section-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <h2 className="section-title">
+            <Feather size={20} className="text-accent" />
+            <span>Exemples d'Usage & Tournures Stylistiques</span>
+            <span className="section-count-badge">{exemples.length}</span>
+          </h2>
+        </div>
 
-        <button
-          className="filter-chip"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          onClick={handleGenererVariations}
-          disabled={isGenerating}
-          title="Générer des exemples d'usage littéraires complémentaires"
-        >
-          <RefreshCw size={14} className={isGenerating ? 'animate-spin' : ''} />
-          <span>{isGenerating ? 'Génération...' : 'Variations stylistiques'}</span>
-        </button>
+        {mot && (
+          <div>
+            <button
+              type="button"
+              className={`btn-ai-widget-enrich ${isGenerating ? 'loading' : ''}`}
+              onClick={handleGenererVariations}
+              disabled={isGenerating}
+              title="Générer de nouveaux exemples d'usage littéraires avec l'IA"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Génération IA...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} />
+                  <span>Compléter avec l'IA</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
+
+      {generateError && (
+        <div style={{ padding: '6px 12px', marginBottom: '12px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-danger, #ef4444)', fontSize: '0.8rem' }}>
+          {generateError}
+        </div>
+      )}
 
       {exemples.length === 0 ? (
         <div style={{ padding: '24px 0', textAlign: 'center' }}>
@@ -71,7 +113,7 @@ export const ExamplesWorkshopSection: React.FC<ExamplesWorkshopSectionProps> = (
             Aucune citation littéraire n'est répertoriée dans la notice du Wiktionnaire pour ce terme.
           </p>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-faint)', marginTop: '8px' }}>
-            Vous pouvez cliquer sur « Variations stylistiques » ci-dessus ou configurer une clé IA (Gemini ou OpenAI) pour générer des exemples littéraires originaux.
+            Vous pouvez cliquer sur « Compléter avec l'IA » ci-dessus pour générer des exemples littéraires originaux.
           </p>
         </div>
       ) : (

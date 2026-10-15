@@ -158,4 +158,17 @@ export class ApiClient {
     }
     return res.json();
   }
+
+  public static async enrichirEtymologie(mot: string): Promise<{ etymologie: string; prononciation?: string }> {
+    const res = await fetch('/api/stylistique/enrichir-etymologie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mot })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Erreur lors de l’enrichissement de l’étymologie');
+    }
+    return res.json();
+  }
 }

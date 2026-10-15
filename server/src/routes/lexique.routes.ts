@@ -193,6 +193,44 @@ lexiqueRouter.post('/stylistique/enrichir-champ-lexical', async (req: Request, r
 });
 
 /**
+ * POST /api/stylistique/enrichir-etymologie
+ * Enrichit l'étymologie et l'origine d'un mot avec l'IA
+ */
+lexiqueRouter.post('/stylistique/enrichir-etymologie', async (req: Request, res: Response) => {
+  try {
+    const { mot } = req.body;
+    if (!mot || typeof mot !== 'string') {
+      res.status(400).json({ error: 'Le champ « mot » est requis.' });
+      return;
+    }
+    const resultat = await aiService.enrichirEtymologieIA(mot.trim());
+    res.json(resultat);
+  } catch (err) {
+    console.error('Erreur /api/stylistique/enrichir-etymologie:', err);
+    res.status(500).json({ error: 'Erreur lors de l’enrichissement étymologique par IA.' });
+  }
+});
+
+/**
+ * POST /api/stylistique/generer-exemples
+ * Génère des exemples d'usage littéraires avec l'IA
+ */
+lexiqueRouter.post('/stylistique/generer-exemples', async (req: Request, res: Response) => {
+  try {
+    const { mot, registre } = req.body;
+    if (!mot || typeof mot !== 'string') {
+      res.status(400).json({ error: 'Le champ « mot » est requis.' });
+      return;
+    }
+    const exemples = await aiService.genererExemplesStylistiques(mot.trim(), 'nom', registre || 'littéraire');
+    res.json(exemples);
+  } catch (err) {
+    console.error('Erreur /api/stylistique/generer-exemples:', err);
+    res.status(500).json({ error: 'Erreur lors de la génération d’exemples par IA.' });
+  }
+});
+
+/**
  * GET /api/config/ai-status
  * Retourne l'état de configuration de l'IA (sans révéler la clé)
  */

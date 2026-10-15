@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FicheLexicale, SynonymeNuance, Antonyme, ElementChampLexical } from '../../../shared/types';
+import { FicheLexicale, SynonymeNuance, Antonyme, ElementChampLexical, ExempleUsage } from '../../../shared/types';
 import { StorageService } from '../services/storage.service';
 import { ApiClient } from '../services/api';
 import { DefinitionsSection } from './DefinitionsSection';
@@ -23,7 +23,9 @@ import {
   Columns2,
   Columns3,
   LayoutGrid,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 
 interface LexicalCardProps {
@@ -118,6 +120,49 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
     };
     ApiClient.setCachedFiche(fiche.mot, updated);
     onUpdateFiche?.(updated);
+  };
+
+  const handleEnrichirExemples = (nouveaux: ExempleUsage[]) => {
+    const updated: FicheLexicale = {
+      ...fiche,
+      exemplesLitteraires: [...(fiche.exemplesLitteraires || []), ...nouveaux]
+    };
+    ApiClient.setCachedFiche(fiche.mot, updated);
+    onUpdateFiche?.(updated);
+  };
+
+  const [isEnrichingWord, setIsEnrichingWord] = useState(false);
+  const [wordEnrichError, setWordEnrichError] = useState<string | null>(null);
+
+  const handleEnrichWordWithAi = async () => {
+    if (!fiche.mot) return;
+    setWordEnrichError(null);
+    setIsEnrichingWord(true);
+    try {
+      const status = await ApiClient.getAiStatus();
+      if (!status.isConfigured && onOpenAiModal) {
+        setIsEnrichingWord(false);
+        onOpenAiModal();
+        return;
+      }
+
+      const res = await ApiClient.enrichirEtymologie(fiche.mot);
+      if (res && res.etymologie) {
+        const updated: FicheLexicale = {
+          ...fiche,
+          etymologie: res.etymologie,
+          prononciationApi: (!fiche.prononciationApi && res.prononciation) ? res.prononciation : fiche.prononciationApi
+        };
+        ApiClient.setCachedFiche(fiche.mot, updated);
+        onUpdateFiche?.(updated);
+      }
+    } catch (err: any) {
+      console.warn('Erreur enrichissement mot:', err);
+      setWordEnrichError('Service IA momentanément indisponible.');
+      setTimeout(() => setWordEnrichError(null), 3000);
+    } finally {
+      setIsEnrichingWord(false);
+    }
   };
 
   return (
@@ -263,6 +308,28 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
               </button>
             )}
 
+            {/* Bouton "Compléter avec l'IA" placé juste avant l'ajout dans le carnet de l'écrivain */}
+            <button
+              type="button"
+              className={`btn-ai-widget-enrich ${isEnrichingWord ? 'loading' : ''}`}
+              onClick={handleEnrichWordWithAi}
+              disabled={isEnrichingWord}
+              title="Compléter l'étymologie et l'analyse lexicale du mot avec l'IA"
+              style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+            >
+              {isEnrichingWord ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Recherche IA...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} />
+                  <span>Compléter avec l'IA</span>
+                </>
+              )}
+            </button>
+
             <button
               className="icon-btn"
               onClick={onToggleFavorite}
@@ -282,6 +349,12 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
             </button>
           </div>
 
+          {wordEnrichError && (
+            <div style={{ padding: '6px 12px', marginTop: '6px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-danger, #ef4444)', fontSize: '0.8rem' }}>
+              {wordEnrichError}
+            </div>
+          )}
+
           {fiche.etymologie ? (
             <div className="word-etymology-box">
               <div className="word-etymology-header">
@@ -292,9 +365,22 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
             </div>
           ) : (
             <div className="word-etymology-box empty">
-              <div className="word-etymology-header">
-                <History size={14} className="text-accent" />
-                <span>Étymologie</span>
+              <div className="word-etymology-header" style={{ justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <History size={14} className="text-accent" />
+                  <span>Étymologie</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-ai-widget-enrich"
+                  onClick={handleEnrichWordWithAi}
+                  disabled={isEnrichingWord}
+                  style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+                  title="Générer l'étymologie avec l'IA"
+                >
+                  <Sparkles size={11} />
+                  <span>Renseigner par l'IA</span>
+                </button>
               </div>
               <p className="word-etymology-text" style={{ color: 'var(--text-muted)' }}>
                 Origine étymologique non documentée.
@@ -346,6 +432,8 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
         <ExamplesWorkshopSection
           mot={fiche.mot}
           exemplesInitiaux={fiche.exemplesLitteraires}
+          onOpenAiModal={onOpenAiModal}
+          onEnrichirExemples={handleEnrichirExemples}
         />
       </div>
 
