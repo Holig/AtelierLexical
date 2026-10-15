@@ -194,27 +194,62 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
         </div>
       )}
 
-      {/* En-tête du mot */}
+      {/* En-tête du mot (Séparé en 2 colonnes : Informations lexicales à gauche, Actions & Étymologie à droite) */}
       <div className="word-header-card animate-fade-in">
-        <div className="word-header-top">
-          <div className="word-title-group">
-            <h1 className="word-title">{fiche.mot}</h1>
+        {/* Colonne Gauche : Titre du mot, phonétique, badges grammaticaux et source */}
+        <div className="word-header-main">
+          <div className="word-header-top">
+            <div className="word-title-group">
+              <h1 className="word-title">{fiche.mot}</h1>
 
-            {fiche.prononciationApi && (
-              <div className="word-phonetic-badge">
-                <span>\{fiche.prononciationApi}\</span>
-                <button
-                  className="audio-btn"
-                  onClick={handlePronounce}
-                  title="Écouter la prononciation française"
-                  aria-label="Écouter la prononciation"
-                >
-                  <Volume2 size={16} className={isPlayingAudio ? 'text-accent' : ''} />
-                </button>
-              </div>
-            )}
+              {fiche.prononciationApi && (
+                <div className="word-phonetic-badge">
+                  <span>\{fiche.prononciationApi}\</span>
+                  <button
+                    className="audio-btn"
+                    onClick={handlePronounce}
+                    title="Écouter la prononciation française"
+                    aria-label="Écouter la prononciation"
+                  >
+                    <Volume2 size={16} className={isPlayingAudio ? 'text-accent' : ''} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Badges grammaticaux et provenance */}
+          <div className="meta-badges-row">
+            {fiche.categories.map((cat, idx) => (
+              <span key={idx} className="badge badge-gold">
+                {cat}
+              </span>
+            ))}
+
+            {fiche.genres?.map((genre, idx) => (
+              <span key={idx} className="badge">
+                genre {genre}
+              </span>
+            ))}
+
+            {fiche.sources[0] && (
+              <a
+                href={fiche.sources[0].url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="badge"
+                style={{ textDecoration: 'none' }}
+                title="Consulter la notice source sur fr.wiktionary.org (licence CC BY-SA 4.0)"
+              >
+                <span>Source : Wiktionnaire (CC BY-SA 4.0)</span>
+                <ExternalLink size={12} />
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Colonne Droite : Boutons d'actions et Encadré d'Étymologie */}
+        <div className="word-header-side">
           <div className="word-header-actions">
             {fiche.conjugaison && (
               <button
@@ -246,47 +281,27 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
               {copied ? <Check size={18} color="var(--color-intensity-1)" /> : <Copy size={18} />}
             </button>
           </div>
-        </div>
 
-        {/* Badges grammaticaux et provenance */}
-        <div className="meta-badges-row">
-          {fiche.categories.map((cat, idx) => (
-            <span key={idx} className="badge badge-gold">
-              {cat}
-            </span>
-          ))}
-
-          {fiche.genres?.map((genre, idx) => (
-            <span key={idx} className="badge">
-              genre {genre}
-            </span>
-          ))}
-
-          {fiche.sources[0] && (
-            <a
-              href={fiche.sources[0].url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="badge"
-              style={{ textDecoration: 'none' }}
-              title="Consulter la notice source sur fr.wiktionary.org (licence CC BY-SA 4.0)"
-            >
-              <span>Source : Wiktionnaire (CC BY-SA 4.0)</span>
-              <ExternalLink size={12} />
-            </a>
+          {fiche.etymologie ? (
+            <div className="word-etymology-box">
+              <div className="word-etymology-header">
+                <History size={14} className="text-accent" />
+                <span>Étymologie & Origine</span>
+              </div>
+              <p className="word-etymology-text">{fiche.etymologie}</p>
+            </div>
+          ) : (
+            <div className="word-etymology-box empty">
+              <div className="word-etymology-header">
+                <History size={14} className="text-accent" />
+                <span>Étymologie</span>
+              </div>
+              <p className="word-etymology-text" style={{ color: 'var(--text-muted)' }}>
+                Origine étymologique non documentée.
+              </p>
+            </div>
           )}
         </div>
-
-        {/* Étymologie si documentée */}
-        {fiche.etymologie && (
-          <div style={{ marginTop: '16px', fontSize: '0.88rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>
-            <span style={{ fontWeight: 600, color: 'var(--text-main)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <History size={14} />
-              Étymologie :
-            </span>{' '}
-            {fiche.etymologie}
-          </div>
-        )}
       </div>
 
       {/* Grille des sections */}

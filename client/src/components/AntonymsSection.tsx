@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Antonyme } from '../../../shared/types';
 import { Split, ArrowUpRight, Sparkles, Loader2 } from 'lucide-react';
 import { ApiClient } from '../services/api';
+import { TilePropositionsModal } from './TilePropositionsModal';
 
 interface AntonymsSectionProps {
   antonymes: Antonyme[];
@@ -18,6 +19,7 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
   onEnrichirAntonymes,
   onOpenAiModal
 }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
 
@@ -51,33 +53,44 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
 
   return (
     <div className="section-panel animate-fade-in">
-      <div className="section-panel-header">
-        <h2 className="section-title">
-          <Split size={20} className="text-accent" />
-          <span>Antonymes & Oppositions</span>
-          <span className="section-count-badge">{antonymes.length}</span>
-        </h2>
+      <div className="section-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <h2 className="section-title">
+            <Split size={20} className="text-accent" />
+            <span>Antonymes & Oppositions</span>
+            <button
+              type="button"
+              className="section-count-badge clickable"
+              onClick={() => setIsModalOpen(true)}
+              title="Cliquer pour afficher la liste complète des antonymes dans une modale"
+            >
+              {antonymes.length}
+            </button>
+          </h2>
+        </div>
 
         {motPrincipal && (
-          <button
-            type="button"
-            className={`btn-ai-widget-enrich ${isEnriching ? 'loading' : ''}`}
-            onClick={handleEnrichWithAi}
-            disabled={isEnriching}
-            title="Trouver d'autres antonymes et contrastes stylistiques avec l'IA"
-          >
-            {isEnriching ? (
-              <>
-                <Loader2 size={13} className="animate-spin" />
-                <span>Recherche IA...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={13} />
-                <span>Compléter avec l'IA</span>
-              </>
-            )}
-          </button>
+          <div>
+            <button
+              type="button"
+              className={`btn-ai-widget-enrich ${isEnriching ? 'loading' : ''}`}
+              onClick={handleEnrichWithAi}
+              disabled={isEnriching}
+              title="Trouver d'autres antonymes et contrastes stylistiques avec l'IA"
+            >
+              {isEnriching ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Recherche IA...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} />
+                  <span>Compléter avec l'IA</span>
+                </>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
@@ -107,6 +120,69 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
           </button>
         ))}
       </div>
+
+      {/* Modale affichant la liste complète des antonymes */}
+      <TilePropositionsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Antonymes & Oppositions"
+        count={antonymes.length}
+        icon={<Split size={18} />}
+        motPrincipal={motPrincipal}
+        searchPlaceholder="Rechercher un antonyme..."
+      >
+        {(searchTerm) => {
+          const list = antonymes.filter(a =>
+            !searchTerm ||
+            a.mot.toLowerCase().includes(searchTerm) ||
+            (a.sensAssocie && a.sensAssocie.toLowerCase().includes(searchTerm))
+          );
+
+          if (list.length === 0) {
+            return (
+              <p className="text-muted" style={{ textAlign: 'center', padding: '24px 0' }}>
+                Aucun antonyme ne correspond à « {searchTerm} ».
+              </p>
+            );
+          }
+
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+              {list.map((ant, idx) => (
+                <button
+                  key={`${ant.mot}-${idx}`}
+                  className="filter-chip"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '0.95rem',
+                    padding: '8px 16px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    onNavigateWord(ant.mot);
+                  }}
+                  title={ant.sensAssocie || `Explorer « ${ant.mot} »`}
+                >
+                  <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{ant.mot}</span>
+                  {ant.estGenereIA && (
+                    <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>IA</span>
+                  )}
+                  {ant.type === 'contextuel' && (
+                    <span className="badge" style={{ fontSize: '0.7rem' }}>contexte</span>
+                  )}
+                  {ant.sensAssocie && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>— {ant.sensAssocie}</span>
+                  )}
+                  <ArrowUpRight size={14} className="text-faint" />
+                </button>
+              ))}
+            </div>
+          );
+        }}
+      </TilePropositionsModal>
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { SynonymeNuance, Intensite, Registre } from '../../../shared/types';
-import { Sparkles, Compass, ArrowUpRight, Filter, Loader2 } from 'lucide-react';
+import { Sparkles, Compass, ArrowUpRight, Filter, Loader2, ChevronDown } from 'lucide-react';
 import { ApiClient } from '../services/api';
+import { TilePropositionsModal } from './TilePropositionsModal';
 
 interface SynonymsNuanceSectionProps {
   synonymes: SynonymeNuance[];
@@ -20,6 +21,8 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
 }) => {
   const [selectedIntensity, setSelectedIntensity] = useState<number | 'all'>('all');
   const [selectedRegister, setSelectedRegister] = useState<Registre | 'all'>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
 
@@ -79,34 +82,67 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
 
   return (
     <div className="section-panel animate-fade-in">
-      <div className="section-panel-header">
-        <h2 className="section-title">
-          <Sparkles size={20} className="text-accent" />
-          <span>Synonymes Intelligents & Nuances</span>
-          <span className="section-count-badge">{synonymes.length}</span>
-        </h2>
+      {/* En-tête avec titre, compteur cliquable et bouton IA juste en dessous */}
+      <div className="section-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <h2 className="section-title">
+            <Sparkles size={20} className="text-accent" />
+            <span>Synonymes Intelligents & Nuances</span>
+            <button
+              type="button"
+              className="section-count-badge clickable"
+              onClick={() => setIsModalOpen(true)}
+              title="Cliquer pour afficher la liste complète des synonymes dans une modale"
+            >
+              {synonymes.length}
+            </button>
+          </h2>
+        </div>
 
-        {motPrincipal && (
+        {/* Boutons d'action juste en dessous du titre */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {motPrincipal && (
+            <button
+              type="button"
+              className={`btn-ai-widget-enrich ${isEnriching ? 'loading' : ''}`}
+              onClick={handleEnrichWithAi}
+              disabled={isEnriching}
+              title="Enrichir automatiquement les nuances et synonymes avec l'IA"
+            >
+              {isEnriching ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Analyse IA...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} />
+                  <span>Compléter avec l'IA</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             type="button"
-            className={`btn-ai-widget-enrich ${isEnriching ? 'loading' : ''}`}
-            onClick={handleEnrichWithAi}
-            disabled={isEnriching}
-            title="Enrichir automatiquement les nuances et synonymes avec l'IA"
+            className="btn-toggle-filters"
+            onClick={() => setShowFilters(!showFilters)}
+            title={showFilters ? "Masquer les filtres d'intensité et de registre" : "Afficher les filtres d'intensité et de registre"}
           >
-            {isEnriching ? (
-              <>
-                <Loader2 size={13} className="animate-spin" />
-                <span>Analyse IA...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={13} />
-                <span>Compléter avec l'IA</span>
-              </>
+            <Filter size={12} />
+            <span>{showFilters ? 'Masquer filtres' : 'Filtrer nuances'}</span>
+            {(selectedIntensity !== 'all' || selectedRegister !== 'all') && (
+              <span className="active-filter-indicator">•</span>
             )}
+            <ChevronDown
+              size={13}
+              style={{
+                transform: showFilters ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.2s'
+              }}
+            />
           </button>
-        )}
+        </div>
       </div>
 
       {enrichError && (
@@ -115,50 +151,52 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
         </div>
       )}
 
-      {/* Barre de filtres */}
-      <div className="filters-bar">
-        <span className="badge">
-          <Filter size={12} />
-          Intensité :
-        </span>
-        <button
-          className={`filter-chip ${selectedIntensity === 'all' ? 'active' : ''}`}
-          onClick={() => setSelectedIntensity('all')}
-        >
-          Toutes
-        </button>
-        {[1, 2, 3, 4].map(lvl => (
+      {/* Barre de filtres (masquable pour gagner de la place) */}
+      {showFilters && (
+        <div className="filters-bar animate-fade-in" style={{ marginTop: '4px', marginBottom: '12px' }}>
+          <span className="badge">
+            <Filter size={12} />
+            Intensité :
+          </span>
           <button
-            key={lvl}
-            className={`filter-chip ${selectedIntensity === lvl ? 'active' : ''}`}
-            onClick={() => setSelectedIntensity(lvl as any)}
+            className={`filter-chip ${selectedIntensity === 'all' ? 'active' : ''}`}
+            onClick={() => setSelectedIntensity('all')}
           >
-            <span className={`intensity-dot intensity-${lvl}`} style={{ display: 'inline-block', marginRight: '5px' }} />
-            {getIntensityLabel(lvl as Intensite)}
+            Toutes
           </button>
-        ))}
-
-        {availableRegisters.length > 1 && (
-          <>
-            <span className="badge" style={{ marginLeft: '12px' }}>Registre :</span>
+          {[1, 2, 3, 4].map(lvl => (
             <button
-              className={`filter-chip ${selectedRegister === 'all' ? 'active' : ''}`}
-              onClick={() => setSelectedRegister('all')}
+              key={lvl}
+              className={`filter-chip ${selectedIntensity === lvl ? 'active' : ''}`}
+              onClick={() => setSelectedIntensity(lvl as any)}
             >
-              Tous
+              <span className={`intensity-dot intensity-${lvl}`} style={{ display: 'inline-block', marginRight: '5px' }} />
+              {getIntensityLabel(lvl as Intensite)}
             </button>
-            {availableRegisters.map(reg => (
+          ))}
+
+          {availableRegisters.length > 1 && (
+            <>
+              <span className="badge" style={{ marginLeft: '12px' }}>Registre :</span>
               <button
-                key={reg}
-                className={`filter-chip ${selectedRegister === reg ? 'active' : ''}`}
-                onClick={() => setSelectedRegister(reg)}
+                className={`filter-chip ${selectedRegister === 'all' ? 'active' : ''}`}
+                onClick={() => setSelectedRegister('all')}
               >
-                {reg}
+                Tous
               </button>
-            ))}
-          </>
-        )}
-      </div>
+              {availableRegisters.map(reg => (
+                <button
+                  key={reg}
+                  className={`filter-chip ${selectedRegister === reg ? 'active' : ''}`}
+                  onClick={() => setSelectedRegister(reg)}
+                >
+                  {reg}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Grille de cartes de nuances */}
       {filteredSynonyms.length > 0 ? (
@@ -215,6 +253,74 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
           Aucun synonyme ne correspond aux filtres sélectionnés.
         </p>
       )}
+
+      {/* Modale affichant la totalité des synonymes et nuances */}
+      <TilePropositionsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Synonymes Intelligents & Nuances"
+        count={synonymes.length}
+        icon={<Sparkles size={18} />}
+        motPrincipal={motPrincipal}
+        searchPlaceholder="Rechercher parmi les synonymes..."
+      >
+        {(searchTerm) => {
+          const list = synonymes.filter(s =>
+            !searchTerm ||
+            s.mot.toLowerCase().includes(searchTerm) ||
+            s.nuance.toLowerCase().includes(searchTerm) ||
+            s.registre.toLowerCase().includes(searchTerm)
+          );
+
+          if (list.length === 0) {
+            return (
+              <p className="text-muted" style={{ textAlign: 'center', padding: '24px 0' }}>
+                Aucun synonyme ne correspond à votre recherche « {searchTerm} ».
+              </p>
+            );
+          }
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {list.map((syn, idx) => (
+                <div
+                  key={`${syn.mot}-${idx}`}
+                  className="synonym-nuance-card"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    onNavigateWord(syn.mot);
+                  }}
+                  title={`Explorer la fiche de « ${syn.mot} »`}
+                >
+                  <div>
+                    <div className="synonym-card-top">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <strong className="synonym-word">{syn.mot}</strong>
+                        {syn.estGenereIA && (
+                          <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>IA</span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className="badge">{syn.registre}</span>
+                        <span className={`intensity-dot intensity-${syn.intensite}`} />
+                        <ArrowUpRight size={15} className="text-faint" />
+                      </div>
+                    </div>
+                    <p className="synonym-nuance-desc">{syn.nuance}</p>
+                  </div>
+                  {syn.contexteConseille && (
+                    <div className="synonym-context-box" style={{ marginTop: '8px' }}>
+                      <Compass size={13} className="text-accent" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.8rem' }}>{syn.contexteConseille}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        }}
+      </TilePropositionsModal>
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { MotMorphologique, FicheLexicale } from '../../../shared/types';
 import { GitBranch, ArrowUpRight, BookOpen, Sparkles } from 'lucide-react';
 import { ApiClient } from '../services/api';
+import { TilePropositionsModal } from './TilePropositionsModal';
 
 interface LexicalFamilySectionProps {
   famille: MotMorphologique[];
@@ -23,6 +24,7 @@ export const LexicalFamilySection: React.FC<LexicalFamilySectionProps> = ({
   famille,
   onNavigateWord
 }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [hoveredData, setHoveredData] = useState<HoveredFamilyData | null>(null);
   const [loadingWord, setLoadingWord] = useState<string | null>(null);
   const [, setCacheVersion] = useState(0); // Déclencheur de re-render lors de la résolution du cache
@@ -142,7 +144,14 @@ export const LexicalFamilySection: React.FC<LexicalFamilySectionProps> = ({
         <h2 className="section-title">
           <GitBranch size={20} className="text-accent" />
           <span>Famille Lexicale (Morphologie)</span>
-          <span className="section-count-badge">{famille.length}</span>
+          <button
+            type="button"
+            className="section-count-badge clickable"
+            onClick={() => setIsModalOpen(true)}
+            title="Cliquer pour afficher la liste complète de la famille lexicale dans une modale"
+          >
+            {famille.length}
+          </button>
         </h2>
       </div>
 
@@ -291,6 +300,60 @@ export const LexicalFamilySection: React.FC<LexicalFamilySectionProps> = ({
         </div>,
         document.body
       )}
+
+      {/* Modale affichant la totalité des dérivés morphologiques */}
+      <TilePropositionsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Famille Lexicale (Morphologie)"
+        count={famille.length}
+        icon={<GitBranch size={18} />}
+        searchPlaceholder="Rechercher un terme dérivé..."
+      >
+        {(searchTerm) => {
+          const list = famille.filter(f =>
+            !searchTerm ||
+            f.mot.toLowerCase().includes(searchTerm) ||
+            (f.relation && f.relation.toLowerCase().includes(searchTerm)) ||
+            (f.categorie && f.categorie.toLowerCase().includes(searchTerm))
+          );
+
+          if (list.length === 0) {
+            return (
+              <p className="text-muted" style={{ textAlign: 'center', padding: '24px 0' }}>
+                Aucun dérivé ne correspond à « {searchTerm} ».
+              </p>
+            );
+          }
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+              {list.map((item, idx) => (
+                <div
+                  key={`${item.mot}-${idx}`}
+                  className="family-card-item"
+                  style={{ cursor: 'pointer', padding: '12px 14px' }}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    onNavigateWord(item.mot);
+                  }}
+                  title={`Explorer la fiche de « ${item.mot} »`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)', textTransform: 'uppercase' }}>
+                      {item.mot}
+                    </span>
+                    <ArrowUpRight size={14} className="text-faint" />
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {item.relation || 'mot dérivé'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          );
+        }}
+      </TilePropositionsModal>
     </div>
   );
 };

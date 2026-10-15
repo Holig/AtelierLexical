@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { DefinitionSens } from '../../../shared/types';
 import { BookOpen, Quote, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { TilePropositionsModal } from './TilePropositionsModal';
 
 interface DefinitionsSectionProps {
   definitions: DefinitionSens[];
@@ -15,6 +16,7 @@ interface HoveredTooltipData {
 }
 
 export const DefinitionsSection: React.FC<DefinitionsSectionProps> = ({ definitions }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedSensIds, setExpandedSensIds] = useState<Set<string | number>>(new Set());
   const [showAllExamples, setShowAllExamples] = useState<boolean>(false);
   const [hoveredData, setHoveredData] = useState<HoveredTooltipData | null>(null);
@@ -142,7 +144,14 @@ export const DefinitionsSection: React.FC<DefinitionsSectionProps> = ({ definiti
         <h2 className="section-title">
           <BookOpen size={20} className="text-accent" />
           <span>Définitions & Sens</span>
-          <span className="section-count-badge">{definitions.length}</span>
+          <button
+            type="button"
+            className="section-count-badge clickable"
+            onClick={() => setIsModalOpen(true)}
+            title="Cliquer pour afficher la liste complète des définitions dans une modale"
+          >
+            {definitions.length}
+          </button>
         </h2>
 
         {totalExemplesCount > 0 && (
@@ -296,6 +305,80 @@ export const DefinitionsSection: React.FC<DefinitionsSectionProps> = ({ definiti
         </div>,
         document.body
       )}
+
+      {/* Modale de toutes les définitions et sens */}
+      <TilePropositionsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Définitions & Sens"
+        count={definitions.length}
+        icon={<BookOpen size={18} />}
+        searchPlaceholder="Rechercher dans les définitions..."
+      >
+        {(searchTerm) => {
+          const list = definitions.filter(d =>
+            !searchTerm ||
+            d.definition.toLowerCase().includes(searchTerm) ||
+            (d.categorie && d.categorie.toLowerCase().includes(searchTerm)) ||
+            (d.domaine && d.domaine.toLowerCase().includes(searchTerm))
+          );
+
+          if (list.length === 0) {
+            return (
+              <p className="text-muted" style={{ textAlign: 'center', padding: '24px 0' }}>
+                Aucune définition ne correspond à « {searchTerm} ».
+              </p>
+            );
+          }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {list.map((sens) => {
+                const domainList = formatDomains(sens.domaine);
+                return (
+                  <div
+                    key={sens.id}
+                    className="definition-item"
+                    style={{
+                      background: 'var(--bg-surface-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '16px 18px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                      <span className="definition-number" style={{ width: '24px', height: '24px', fontSize: '0.8rem' }}>
+                        {sens.numero}
+                      </span>
+                      {sens.categorie && <span className="badge badge-gold">{sens.categorie}</span>}
+                      {sens.genre && <span className="badge">genre {sens.genre}</span>}
+                      {domainList.map((d, i) => (
+                        <span key={i} className="badge">{d}</span>
+                      ))}
+                      {sens.registre && sens.registre !== 'courant' && (
+                        <span className="badge">registre {sens.registre}</span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '0.96rem', lineHeight: 1.5, color: 'var(--text-main)', margin: '0 0 10px 0' }}>
+                      {sens.definition}
+                    </p>
+                    {sens.exemples && sens.exemples.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '2px solid var(--border-medium)', paddingLeft: '12px', marginTop: '8px' }}>
+                        {sens.exemples.map((ex, i) => (
+                          <div key={i} style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                            « {ex.texte} »
+                            {ex.source && <span style={{ fontSize: '0.75rem', color: 'var(--text-faint)', marginLeft: '6px' }}>— {ex.source}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }}
+      </TilePropositionsModal>
     </div>
   );
 };

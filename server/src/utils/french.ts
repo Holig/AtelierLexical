@@ -33,6 +33,34 @@ export function supprimerAccents(str: string): string {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+const NOMS_LANGUES: Record<string, string> = {
+  la: 'latin',
+  grc: 'grec ancien',
+  fro: 'ancien français',
+  frm: 'moyen français',
+  en: 'anglais',
+  de: 'allemand',
+  it: 'italien',
+  es: 'espagnol',
+  pt: 'portugais',
+  ar: 'arabe',
+  he: 'hébreu',
+  ru: 'russe',
+  nl: 'néerlandais',
+  pro: 'ancien occitan',
+  oc: 'occitan',
+  goh: 'vieux haut allemand',
+  gmh: 'moyen haut allemand',
+  non: 'vieux norrois',
+  sa: 'sanskrit',
+  fa: 'persan',
+  tr: 'turc',
+  got: 'gotique',
+  cel: 'celtique',
+  gem: 'germanique',
+  ine: 'indo-européen'
+};
+
 /**
  * Nettoie les liens wikitext [[mot|texte]] ou [[mot]] et balises html simples
  */
@@ -55,9 +83,53 @@ export function nettoyerWikitext(texte: string): string {
     return '';
   });
 
-  // Résoudre les templates imbriqués {{lien|...}}, {{w|...}} ou supprimer les métadonnées {{...}}
+  // Modèles de date : {{date|1175}} ou {{date|XII|s}}
+  resultat = resultat.replace(/\{\{date\|([^|}]+)(?:\|([^|}]+))?(?:\|[^}]*)?\}\}/gi, (_m, p1, p2) => {
+    if (p2 === 's' || p2 === 'siècle') return `(${p1}e siècle)`;
+    return `(${p1})`;
+  });
+
+  // Modèles d'étymologie {{étyl|codeLang|codeCible|...}}
+  resultat = resultat.replace(/\{\{étyl\|([^|}]+)(?:\|[^|}]+)?(?:\|([^}]*))?\}\}/gi, (_m, codeLang, paramsStr) => {
+    const langName = NOMS_LANGUES[codeLang.toLowerCase()] || codeLang;
+    let mot = '';
+    let sens = '';
+    if (paramsStr) {
+      const parts = paramsStr.split('|');
+      for (const p of parts) {
+        const pt = p.trim();
+        if (pt.startsWith('mot=')) mot = pt.substring(4).trim();
+        else if (pt.startsWith('sens=')) sens = pt.substring(5).trim();
+        else if (pt.startsWith('dif=')) mot = pt.substring(4).trim();
+        else if (pt.startsWith('tr=')) mot = pt.substring(3).trim();
+        else if (!pt.includes('=') && !mot) mot = pt;
+      }
+    }
+    let out = langName;
+    if (mot) out += ' ' + mot;
+    if (sens) out += ' (« ' + sens + ' »)';
+    return out;
+  });
+
+  // Modèles de mots linguistiques {{m|mot|lang|sens=...}} ou {{terme|...}}
+  resultat = resultat.replace(/\{\{(?:m|terme)\|([^|}]+)(?:\|([^|}]+))?(?:\|([^}]*))?\}\}/gi, (_m, mot, _lang, extra) => {
+    let sens = '';
+    if (extra) {
+      const parts = extra.split('|');
+      for (const p of parts) {
+        const pt = p.trim();
+        if (pt.startsWith('sens=')) sens = pt.substring(5).trim();
+        else if (pt.startsWith('dif=')) mot = pt.substring(4).trim();
+      }
+    }
+    return sens ? `${mot} (« ${sens} »)` : mot;
+  });
+
+  // Modèles simples de lien ou mise en forme : {{lien|...}}, {{w|...}}, {{lang|...}}, {{polytonique|...}}
+  resultat = resultat.replace(/\{\{(?:lien|w|lang|polytonique|la-mot|grc-mot)\|([^|}]+)(?:\|[^}]*)?\}\}/gi, '$1');
+
+  // Supprimer les templates inconnus restants
   while (/\{\{[^{}]*\}\}/.test(resultat)) {
-    resultat = resultat.replace(/\{\{(?:lien|w|m|terme)\|([^|}]+)(?:\|[^}]*)?\}\}/gi, '$1');
     resultat = resultat.replace(/\{\{[^{}]*\}\}/g, ' ');
   }
 
