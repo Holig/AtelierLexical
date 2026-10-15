@@ -3,6 +3,7 @@ import { SynonymeNuance, Intensite, Registre } from '../../../shared/types';
 import { Sparkles, Compass, ArrowUpRight, Filter, Loader2, ChevronDown } from 'lucide-react';
 import { ApiClient } from '../services/api';
 import { TilePropositionsModal } from './TilePropositionsModal';
+import { WordHoverTooltipPortal, useWordTooltip } from './WordHoverTooltipPortal';
 
 interface SynonymsNuanceSectionProps {
   synonymes: SynonymeNuance[];
@@ -25,6 +26,14 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
+
+  // Hook unifié d'infobulle au survol pour la modale
+  const {
+    hoveredData,
+    handleWordMouseEnter,
+    handleWordMouseLeave,
+    closeTooltip
+  } = useWordTooltip();
 
   const handleEnrichWithAi = async () => {
     if (!motPrincipal) return;
@@ -254,10 +263,26 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
         </p>
       )}
 
+      {/* Infobulle Portal pour les synonymes survolés dans la modale */}
+      <WordHoverTooltipPortal
+        hoveredData={hoveredData}
+        onNavigateWord={(mot) => {
+          closeTooltip();
+          setIsModalOpen(false);
+          onNavigateWord(mot);
+        }}
+        onClose={closeTooltip}
+        icon={<Sparkles size={14} className="text-accent" />}
+        fallbackDescription="Synonyme exprimant une nuance stylistique précise."
+      />
+
       {/* Modale affichant la totalité des synonymes et nuances */}
       <TilePropositionsModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          closeTooltip();
+          setIsModalOpen(false);
+        }}
         title="Synonymes Intelligents & Nuances"
         count={synonymes.length}
         icon={<Sparkles size={18} />}
@@ -288,10 +313,17 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
                   className="synonym-nuance-card"
                   style={{ cursor: 'pointer' }}
                   onClick={() => {
+                    closeTooltip();
                     setIsModalOpen(false);
                     onNavigateWord(syn.mot);
                   }}
-                  title={`Explorer la fiche de « ${syn.mot} »`}
+                  onMouseEnter={(e) => handleWordMouseEnter({
+                    mot: syn.mot,
+                    badge: `Synonyme (${syn.registre})`,
+                    note: syn.nuance,
+                    estGenereIA: syn.estGenereIA
+                  }, e)}
+                  onMouseLeave={handleWordMouseLeave}
                 >
                   <div>
                     <div className="synonym-card-top">

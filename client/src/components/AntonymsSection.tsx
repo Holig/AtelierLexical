@@ -3,6 +3,7 @@ import { Antonyme } from '../../../shared/types';
 import { Split, ArrowUpRight, Sparkles, Loader2 } from 'lucide-react';
 import { ApiClient } from '../services/api';
 import { TilePropositionsModal } from './TilePropositionsModal';
+import { WordHoverTooltipPortal, useWordTooltip } from './WordHoverTooltipPortal';
 
 interface AntonymsSectionProps {
   antonymes: Antonyme[];
@@ -22,6 +23,14 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
+
+  // Hook unifié d'infobulle au survol (partagé pour la tuile et pour la modale)
+  const {
+    hoveredData,
+    handleWordMouseEnter,
+    handleWordMouseLeave,
+    closeTooltip
+  } = useWordTooltip();
 
   const handleEnrichWithAi = async () => {
     if (!motPrincipal) return;
@@ -61,7 +70,10 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
             <button
               type="button"
               className="section-count-badge clickable"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                closeTooltip();
+                setIsModalOpen(true);
+              }}
               title="Cliquer pour afficher la liste complète des antonymes dans une modale"
             >
               {antonymes.length}
@@ -101,30 +113,59 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
       )}
 
       <div className="chips-cloud-wrap section-scroll-content" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignContent: 'flex-start' }}>
-        {antonymes.map((ant, idx) => (
-          <button
-            key={`${ant.mot}-${idx}`}
-            className="filter-chip"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', padding: '6px 14px' }}
-            onClick={() => onNavigateWord(ant.mot)}
-            title={`Explorer la fiche de « ${ant.mot} »`}
-          >
-            <span style={{ fontWeight: 600 }}>{ant.mot}</span>
-            {ant.estGenereIA && (
-              <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>
-                IA
-              </span>
-            )}
-            {ant.type === 'contextuel' && <span className="badge" style={{ fontSize: '0.7rem' }}>contexte</span>}
-            <ArrowUpRight size={14} className="text-faint" />
-          </button>
-        ))}
+        {antonymes.map((ant, idx) => {
+          const isHovered = hoveredData?.mot === ant.mot;
+
+          return (
+            <button
+              key={`${ant.mot}-${idx}`}
+              className={`filter-chip ${isHovered ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', padding: '6px 14px' }}
+              onClick={() => {
+                closeTooltip();
+                onNavigateWord(ant.mot);
+              }}
+              onMouseEnter={(e) => handleWordMouseEnter({
+                mot: ant.mot,
+                badge: ant.type === 'contextuel' ? 'Antonyme contextuel' : 'Antonyme',
+                note: ant.sensAssocie,
+                estGenereIA: ant.estGenereIA
+              }, e)}
+              onMouseLeave={handleWordMouseLeave}
+            >
+              <span style={{ fontWeight: 600 }}>{ant.mot}</span>
+              {ant.estGenereIA && (
+                <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>
+                  IA
+                </span>
+              )}
+              {ant.type === 'contextuel' && <span className="badge" style={{ fontSize: '0.7rem' }}>contexte</span>}
+              <ArrowUpRight size={14} className="text-faint" />
+            </button>
+          );
+        })}
       </div>
+
+      {/* Infobulle Portal flottante avec les détails lexicaux de l'antonyme (tuile & modale) */}
+      <WordHoverTooltipPortal
+        hoveredData={hoveredData}
+        onNavigateWord={(mot) => {
+          closeTooltip();
+          setIsModalOpen(false);
+          onNavigateWord(mot);
+        }}
+        onClose={closeTooltip}
+        icon={<Split size={14} className="text-accent" />}
+        fallbackDescription={`Antonyme ou contraste sémantique opposé à « ${motPrincipal || 'votre recherche'} ».'`}
+      />
 
       {/* Modale affichant la liste complète des antonymes */}
       <TilePropositionsModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          closeTooltip();
+          setIsModalOpen(false);
+        }}
         title="Antonymes & Oppositions"
         count={antonymes.length}
         icon={<Split size={18} />}
@@ -148,37 +189,48 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
 
           return (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-              {list.map((ant, idx) => (
-                <button
-                  key={`${ant.mot}-${idx}`}
-                  className="filter-chip"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '0.95rem',
-                    padding: '8px 16px',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    onNavigateWord(ant.mot);
-                  }}
-                  title={ant.sensAssocie || `Explorer « ${ant.mot} »`}
-                >
-                  <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{ant.mot}</span>
-                  {ant.estGenereIA && (
-                    <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>IA</span>
-                  )}
-                  {ant.type === 'contextuel' && (
-                    <span className="badge" style={{ fontSize: '0.7rem' }}>contexte</span>
-                  )}
-                  {ant.sensAssocie && (
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>— {ant.sensAssocie}</span>
-                  )}
-                  <ArrowUpRight size={14} className="text-faint" />
-                </button>
-              ))}
+              {list.map((ant, idx) => {
+                const isHovered = hoveredData?.mot === ant.mot;
+
+                return (
+                  <button
+                    key={`${ant.mot}-${idx}`}
+                    className={`filter-chip ${isHovered ? 'active' : ''}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '0.95rem',
+                      padding: '8px 16px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      closeTooltip();
+                      setIsModalOpen(false);
+                      onNavigateWord(ant.mot);
+                    }}
+                    onMouseEnter={(e) => handleWordMouseEnter({
+                      mot: ant.mot,
+                      badge: ant.type === 'contextuel' ? 'Antonyme contextuel' : 'Antonyme',
+                      note: ant.sensAssocie,
+                      estGenereIA: ant.estGenereIA
+                    }, e)}
+                    onMouseLeave={handleWordMouseLeave}
+                  >
+                    <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{ant.mot}</span>
+                    {ant.estGenereIA && (
+                      <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>IA</span>
+                    )}
+                    {ant.type === 'contextuel' && (
+                      <span className="badge" style={{ fontSize: '0.7rem' }}>contexte</span>
+                    )}
+                    {ant.sensAssocie && (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>— {ant.sensAssocie}</span>
+                    )}
+                    <ArrowUpRight size={14} className="text-faint" />
+                  </button>
+                );
+              })}
             </div>
           );
         }}

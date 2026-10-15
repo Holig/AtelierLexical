@@ -1333,28 +1333,30 @@ input, textarea, select {
 [data-theme='light'] .definition-hover-tooltip-portal {
   background: #ffffff !important;
   background-color: #ffffff !important;
-  border: 1px solid rgba(180, 83, 9, 0.35);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18), 0 3px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(180, 83, 9, 0.4) !important;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.22), 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(180, 83, 9, 0.2) !important;
 }
 
 [data-theme='light'] .definition-hover-tooltip::before,
 [data-theme='light'] .definition-hover-tooltip-portal::before {
   background: #ffffff !important;
   background-color: #ffffff !important;
+  border-color: rgba(180, 83, 9, 0.4) !important;
 }
 
 [data-theme='dark'] .definition-hover-tooltip,
 [data-theme='dark'] .definition-hover-tooltip-portal {
   background: #131720 !important;
   background-color: #131720 !important;
-  border: 1px solid rgba(217, 119, 6, 0.45);
-  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.65), 0 4px 14px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(217, 119, 6, 0.5) !important;
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.8), 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(217, 119, 6, 0.3) !important;
 }
 
 [data-theme='dark'] .definition-hover-tooltip::before,
 [data-theme='dark'] .definition-hover-tooltip-portal::before {
   background: #131720 !important;
   background-color: #131720 !important;
+  border-color: rgba(217, 119, 6, 0.5) !important;
 }
 
 /* Pont invisible pour maintenir le survol entre le bouton et l'infobulle */
