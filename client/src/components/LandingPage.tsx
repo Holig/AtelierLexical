@@ -20,7 +20,8 @@ import {
   Sun,
   Moon,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  ArrowUp
 } from 'lucide-react';
 import { ApiClient } from '../services/api';
 import { DonationPublicConfig } from '../../../shared/types';
@@ -58,10 +59,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     label: 'Soutenir le projet'
   });
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isNavScrolled, setIsNavScrolled] = useState(false);
 
   useEffect(() => {
     ApiClient.getDonationConfig().then(setDonationConfig);
+
+    const handleScroll = () => {
+      const y = window.scrollY;
+      setIsNavScrolled(y > 20);
+      setShowScrollTop(y > 250);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleScrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,8 +101,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="landing-wrapper">
-      {/* Barre de navigation supérieure */}
-      <header className="landing-nav">
+      {/* Barre de navigation supérieure fixe */}
+      <header className={`landing-nav ${isNavScrolled ? 'is-scrolled' : ''}`}>
         <div className="landing-nav-inner">
           <div className="brand-logo" onClick={onOpenApp} style={{ cursor: 'pointer' }}>
             <div className="logo-icon-wrapper">
@@ -557,6 +573,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </footer>
+
+      {/* Bouton flottant pour remonter en haut de la page */}
+      {showScrollTop && (
+        <button
+          type="button"
+          className="landing-scroll-top-btn animate-fade-in"
+          onClick={handleScrollToTop}
+          title="Remonter en haut de la page"
+          aria-label="Remonter en haut de la page"
+        >
+          <ArrowUp size={22} />
+        </button>
+      )}
     </div>
   );
 };
