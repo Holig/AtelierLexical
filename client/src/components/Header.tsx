@@ -21,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   toggleTheme,
   favoritesCount,
   onLogoClick,
+  onNavigateHome,
   onOpenAiModal,
   onOpenAboutModal,
   aiStatus
