@@ -46,13 +46,16 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
 
       const existants = antonymes.map(a => a.mot);
       const nouveaux = await ApiClient.enrichirAntonymes(motPrincipal, existants);
-      if (nouveaux && nouveaux.length > 0 && onEnrichirAntonymes) {
-        onEnrichirAntonymes(nouveaux);
+      if (nouveaux && nouveaux.length > 0) {
+        onEnrichirAntonymes?.(nouveaux);
+      } else {
+        setEnrichError('Aucun nouvel antonyme trouvé ou service IA momentanément saturé.');
+        setTimeout(() => setEnrichError(null), 4000);
       }
     } catch (err: any) {
       console.warn('Erreur enrichissement antonymes:', err);
       setEnrichError('Service IA momentanément indisponible.');
-      setTimeout(() => setEnrichError(null), 3000);
+      setTimeout(() => setEnrichError(null), 4000);
     } finally {
       setIsEnriching(false);
     }

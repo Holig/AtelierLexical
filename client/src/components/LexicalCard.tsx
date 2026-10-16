@@ -155,11 +155,14 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
         };
         ApiClient.setCachedFiche(fiche.mot, updated);
         onUpdateFiche?.(updated);
+      } else {
+        setWordEnrichError('Notice étymologique indisponible ou service IA saturé.');
+        setTimeout(() => setWordEnrichError(null), 4000);
       }
     } catch (err: any) {
       console.warn('Erreur enrichissement mot:', err);
       setWordEnrichError('Service IA momentanément indisponible.');
-      setTimeout(() => setWordEnrichError(null), 3000);
+      setTimeout(() => setWordEnrichError(null), 4000);
     } finally {
       setIsEnrichingWord(false);
     }

@@ -49,13 +49,16 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
 
       const existants = synonymes.map(s => s.mot);
       const nouveaux = await ApiClient.enrichirSynonymes(motPrincipal, existants);
-      if (nouveaux && nouveaux.length > 0 && onEnrichirSynonymes) {
-        onEnrichirSynonymes(nouveaux);
+      if (nouveaux && nouveaux.length > 0) {
+        onEnrichirSynonymes?.(nouveaux);
+      } else {
+        setEnrichError('Aucune nouvelle nuance trouvée ou service IA momentanément saturé.');
+        setTimeout(() => setEnrichError(null), 4000);
       }
     } catch (err: any) {
       console.warn('Erreur enrichissement synonymes:', err);
       setEnrichError('Service IA momentanément indisponible.');
-      setTimeout(() => setEnrichError(null), 3000);
+      setTimeout(() => setEnrichError(null), 4000);
     } finally {
       setIsEnriching(false);
     }

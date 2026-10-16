@@ -48,11 +48,14 @@ export const ExamplesWorkshopSection: React.FC<ExamplesWorkshopSectionProps> = (
       if (nouveaux && nouveaux.length > 0) {
         setExemples(prev => [...prev, ...nouveaux]);
         onEnrichirExemples?.(nouveaux);
+      } else {
+        setGenerateError('Aucun nouvel exemple généré ou service IA momentanément saturé.');
+        setTimeout(() => setGenerateError(null), 4000);
       }
     } catch (err) {
       console.warn('Erreur génération variations:', err);
       setGenerateError('Service IA momentanément indisponible.');
-      setTimeout(() => setGenerateError(null), 3000);
+      setTimeout(() => setGenerateError(null), 4000);
     } finally {
       setIsGenerating(false);
     }

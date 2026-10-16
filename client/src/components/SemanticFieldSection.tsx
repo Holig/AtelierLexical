@@ -46,13 +46,16 @@ export const SemanticFieldSection: React.FC<SemanticFieldSectionProps> = ({
 
       const existants = champLexical.map(c => c.mot);
       const nouveaux = await ApiClient.enrichirChampLexical(motPrincipal, existants);
-      if (nouveaux && nouveaux.length > 0 && onEnrichirChampLexical) {
-        onEnrichirChampLexical(nouveaux);
+      if (nouveaux && nouveaux.length > 0) {
+        onEnrichirChampLexical?.(nouveaux);
+      } else {
+        setEnrichError('Aucune nouvelle association trouvée ou service IA momentanément saturé.');
+        setTimeout(() => setEnrichError(null), 4000);
       }
     } catch (err: any) {
       console.warn('Erreur enrichissement champ lexical:', err);
       setEnrichError('Service IA momentanément indisponible.');
-      setTimeout(() => setEnrichError(null), 3000);
+      setTimeout(() => setEnrichError(null), 4000);
     } finally {
       setIsEnriching(false);
     }

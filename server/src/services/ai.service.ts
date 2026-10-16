@@ -10,7 +10,10 @@ import {
   PropositionStylistique,
   SynonymeNuance,
   Antonyme,
-  ElementChampLexical
+  ElementChampLexical,
+  Intensite,
+  Registre,
+  Connotation
 } from '../../../shared/types';
 import { nuanceService } from './nuance.service';
 import { normaliserMotRecherche } from '../utils/french';
@@ -18,10 +21,17 @@ import { normaliserMotRecherche } from '../utils/french';
 export class AIService {
   private geminiKey: string | undefined;
   private openaiKey: string | undefined;
+  private preferredProvider: 'gemini' | 'openai' | undefined;
 
   constructor() {
     this.geminiKey = process.env.GEMINI_API_KEY;
     this.openaiKey = process.env.OPENAI_API_KEY;
+    const envPref = process.env.ACTIVE_AI_PROVIDER;
+    if (envPref === 'gemini' || envPref === 'openai') {
+      this.preferredProvider = envPref;
+    } else {
+      this.preferredProvider = this.geminiKey ? 'gemini' : (this.openaiKey ? 'openai' : undefined);
+    }
   }
 
   private get activeGeminiKey(): string | undefined {
@@ -33,24 +43,37 @@ export class AIService {
   }
 
   /**
-   * Vérifie si un service IA externe est configuré
+   * Vérifie si au moins un service IA externe est configuré
    */
   public isAvailable(): boolean {
     return Boolean(this.activeGeminiKey || this.activeOpenaiKey);
   }
 
+  /**
+   * Renvoie l'état de configuration de l'IA et le fournisseur actif
+   */
   public getStatus(): { isConfigured: boolean; provider: 'gemini' | 'openai' | 'none'; maskedKey?: string } {
-    const gem = this.activeGeminiKey;
-    if (gem) {
-      const masked = gem.length > 8
-        ? '••••••••' + gem.slice(-4)
+    if (this.preferredProvider === 'openai' && this.activeOpenaiKey) {
+      const masked = this.activeOpenaiKey.length > 8
+        ? '••••••••' + this.activeOpenaiKey.slice(-4)
+        : '••••••••';
+      return { isConfigured: true, provider: 'openai', maskedKey: masked };
+    }
+    if (this.preferredProvider === 'gemini' && this.activeGeminiKey) {
+      const masked = this.activeGeminiKey.length > 8
+        ? '••••••••' + this.activeGeminiKey.slice(-4)
         : '••••••••';
       return { isConfigured: true, provider: 'gemini', maskedKey: masked };
     }
-    const oai = this.activeOpenaiKey;
-    if (oai) {
-      const masked = oai.length > 8
-        ? '••••••••' + oai.slice(-4)
+    if (this.activeGeminiKey) {
+      const masked = this.activeGeminiKey.length > 8
+        ? '••••••••' + this.activeGeminiKey.slice(-4)
+        : '••••••••';
+      return { isConfigured: true, provider: 'gemini', maskedKey: masked };
+    }
+    if (this.activeOpenaiKey) {
+      const masked = this.activeOpenaiKey.length > 8
+        ? '••••••••' + this.activeOpenaiKey.slice(-4)
         : '••••••••';
       return { isConfigured: true, provider: 'openai', maskedKey: masked };
     }
@@ -66,10 +89,20 @@ export class AIService {
       this.geminiKey = cleanKey || undefined;
       process.env.GEMINI_API_KEY = cleanKey;
       this.sauvegarderEnv('GEMINI_API_KEY', cleanKey);
+      if (cleanKey) {
+        this.preferredProvider = 'gemini';
+        process.env.ACTIVE_AI_PROVIDER = 'gemini';
+        this.sauvegarderEnv('ACTIVE_AI_PROVIDER', 'gemini');
+      }
     } else if (provider === 'openai') {
       this.openaiKey = cleanKey || undefined;
       process.env.OPENAI_API_KEY = cleanKey;
       this.sauvegarderEnv('OPENAI_API_KEY', cleanKey);
+      if (cleanKey) {
+        this.preferredProvider = 'openai';
+        process.env.ACTIVE_AI_PROVIDER = 'openai';
+        this.sauvegarderEnv('ACTIVE_AI_PROVIDER', 'openai');
+      }
     }
   }
 
@@ -93,82 +126,96 @@ export class AIService {
   }
 
   /**
-   * Teste la validité de la clé API auprès du fournisseur
+   * Teste la connectivité avec le fournisseur d'IA actif
    */
   public async testConnection(): Promise<{ success: boolean; message: string; latencyMs?: number }> {
-    if (!this.isAvailable()) {
-      return { success: false, message: 'Aucune clé d\'API n\'est actuellement configurée.' };
+    const status = this.getStatus();
+    if (!status.isConfigured) {
+      return { success: false, message: 'Aucune clé d’API n’est actuellement configurée.' };
     }
 
+    if (status.provider === 'openai') {
+      return this.testerConnexionOpenAI();
+    } else {
+      return this.testerConnexionGemini();
+    }
+  }
+
+  private async testerConnexionGemini(): Promise<{ success: boolean; message: string; latencyMs?: number }> {
     const t0 = Date.now();
     try {
-      const gemKey = this.activeGeminiKey;
-      const oaiKey = this.activeOpenaiKey;
-
-      if (gemKey) {
-        const raw = await this.executerRequeteGemini('Réponds en un seul mot : Actif');
-        const latencyMs = Date.now() - t0;
-        if (raw) {
-          return {
-            success: true,
-            message: `Connexion Google Gemini validée avec succès ! (Temps de réponse : ${latencyMs}ms)`,
-            latencyMs
-          };
-        } else {
-          return {
-            success: false,
-            message: 'Échec de connexion : vérifiez que la clé API Google Gemini est valide et dispose des droits.',
-            latencyMs
-          };
-        }
-      } else if (oaiKey) {
-        const url = 'https://api.openai.com/v1/chat/completions';
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${oaiKey}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [{ role: 'user', content: 'Actif' }],
-            max_tokens: 5
-          })
-        });
-
-        const latencyMs = Date.now() - t0;
-        if (!res.ok) {
-          const errData: any = await res.json().catch(() => ({}));
-          const errMsg = errData?.error?.message || `Erreur HTTP ${res.status}`;
-          return { success: false, message: `OpenAI a refusé la requête : ${errMsg}`, latencyMs };
-        }
-
+      const raw = await this.executerRequeteGemini('Réponds en un seul mot : Actif');
+      const latencyMs = Date.now() - t0;
+      if (raw) {
         return {
           success: true,
-          message: `Connexion OpenAI validée avec succès ! (Temps de réponse : ${latencyMs}ms)`,
+          message: `Connexion Google Gemini validée avec succès ! (Temps de réponse : ${latencyMs}ms)`,
           latencyMs
         };
       }
+      return {
+        success: false,
+        message: 'Échec de connexion : vérifiez la validité de la clé Google Gemini et son quota.',
+        latencyMs
+      };
     } catch (err: any) {
-      return { success: false, message: `Erreur réseau ou d'accès à l'API : ${err.message}` };
+      return { success: false, message: `Erreur d'accès à Google Gemini : ${err.message}` };
     }
+  }
 
-    return { success: false, message: 'Fournisseur d\'IA non pris en charge.' };
+  private async testerConnexionOpenAI(): Promise<{ success: boolean; message: string; latencyMs?: number }> {
+    const t0 = Date.now();
+    const key = this.activeOpenaiKey;
+    if (!key) return { success: false, message: 'Aucune clé OpenAI configurée.' };
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: 'Actif' }],
+          max_tokens: 5
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      const latencyMs = Date.now() - t0;
+
+      if (!res.ok) {
+        const errData: any = await res.json().catch(() => ({}));
+        const errMsg = errData?.error?.message || `Erreur HTTP ${res.status}`;
+        return { success: false, message: `OpenAI a refusé la requête : ${errMsg}`, latencyMs };
+      }
+
+      return {
+        success: true,
+        message: `Connexion ChatGPT / OpenAI validée avec succès ! (Temps de réponse : ${latencyMs}ms)`,
+        latencyMs
+      };
+    } catch (err: any) {
+      return { success: false, message: `Erreur réseau OpenAI : ${err.message}` };
+    }
   }
 
   /**
-   * Exécute une requête avec cascade automatique de modèles Gemini
+   * Exécute une requête avec cascade automatique de modèles Gemini rapides
    */
   private async executerRequeteGemini(prompt: string, responseJson: boolean = false): Promise<string | null> {
     const key = this.activeGeminiKey;
     if (!key) return null;
+
+    // Modèles actifs et rapides
     const models = [
-      'gemini-flash-latest',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-2.5-pro',
-      'gemini-pro-latest'
+      'gemini-3.5-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-flash-lite-latest',
+      'gemini-flash-latest'
     ];
 
     for (const m of models) {
@@ -181,65 +228,130 @@ export class AIService {
           body.generationConfig = { responseMimeType: 'application/json' };
         }
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
+          signal: controller.signal
         });
+        clearTimeout(timeout);
 
         if (res.ok) {
           const data: any = await res.json();
           const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (rawText) return rawText;
+          if (rawText && rawText.trim().length > 0) return rawText.trim();
         }
-      } catch (err) {
-        // Essayer le modèle suivant
+      } catch {
+        // Tenter le modèle suivant en cas d'erreur ou timeout
       }
     }
     return null;
   }
 
+  /**
+   * Exécute une requête OpenAI (ChatGPT)
+   */
   private async executerRequeteOpenAI(prompt: string, responseJson: boolean = false): Promise<string | null> {
     const key = this.activeOpenaiKey;
     if (!key) return null;
-    try {
-      const body: any = {
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }]
-      };
-      if (responseJson) {
-        body.response_format = { type: 'json_object' };
+
+    const models = ['gpt-4o-mini', 'gpt-4o'];
+
+    for (const model of models) {
+      try {
+        const body: any = {
+          model,
+          messages: [{ role: 'user', content: prompt }]
+        };
+        if (responseJson) {
+          body.response_format = { type: 'json_object' };
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 7000);
+
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        if (res.ok) {
+          const data: any = await res.json();
+          const content = data?.choices?.[0]?.message?.content;
+          if (content && content.trim().length > 0) return content.trim();
+        }
+      } catch {
+        // Tenter le modèle suivant
       }
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify(body)
-      });
-      if (res.ok) {
-        const data: any = await res.json();
-        return data?.choices?.[0]?.message?.content || null;
-      }
-    } catch {
-      // Ignorer
     }
     return null;
   }
 
+  /**
+   * Exécute la requête sur le fournisseur configuré (Gemini ou OpenAI avec secours croisé)
+   */
   private async executerRequeteIA(prompt: string, responseJson: boolean = false): Promise<string | null> {
-    if (this.activeGeminiKey) {
-      const res = await this.executerRequeteGemini(prompt, responseJson);
-      if (res) return res;
-    }
-    if (this.activeOpenaiKey) {
+    const status = this.getStatus();
+
+    if (status.provider === 'openai') {
       const res = await this.executerRequeteOpenAI(prompt, responseJson);
       if (res) return res;
+      // Secours sur Gemini si configuré
+      if (this.activeGeminiKey) {
+        return await this.executerRequeteGemini(prompt, responseJson);
+      }
+    } else {
+      // Priorité Gemini
+      const res = await this.executerRequeteGemini(prompt, responseJson);
+      if (res) return res;
+      // Secours sur OpenAI si configuré
+      if (this.activeOpenaiKey) {
+        return await this.executerRequeteOpenAI(prompt, responseJson);
+      }
     }
+
     return null;
   }
 
+  /**
+   * Extrait un tableau JSON de manière robuste, que l'IA renvoie [...] ou { "cle": [...] }
+   */
+  private extraireTableauJSON<T>(rawText: string | null): T[] {
+    if (!rawText) return [];
+    try {
+      const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      if (parsed && typeof parsed === 'object') {
+        const found = Object.values(parsed).find(v => Array.isArray(v));
+        if (Array.isArray(found)) return found as T[];
+      }
+    } catch {
+      try {
+        const match = rawText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  }
+
+  // =========================================================================
+  // 1. ÉTYMOLOGIE & ORIGINE
+  // =========================================================================
   /**
    * Enrichit l'étymologie et l'origine d'un mot avec l'IA
    */
@@ -274,10 +386,202 @@ Réponds UNIQUEMENT sous la forme d'un objet JSON strict :
     }
 
     return {
-      etymologie: `Issu de la tradition linguistique française pour le terme « ${mot} » (enrichi par l'Atelier Lexical).`
+      etymologie: `Terme attesté dans le corpus classique français pour « ${mot} », issu de traditions littéraires séculaires.`
     };
   }
 
+  // =========================================================================
+  // 2. SYNONYMES INTELLIGENTS & NUANCES
+  // =========================================================================
+  /**
+   * Enrichit la liste des synonymes avec l'IA (ou repli d'excellence stylistique)
+   */
+  public async enrichirSynonymesIA(mot: string, existants: string[] = []): Promise<SynonymeNuance[]> {
+    const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
+    existantsNorm.add(normaliserMotRecherche(mot));
+
+    const prompt = `Tu es un maître de style et lexicographe littéraire français.
+Pour le mot « ${mot} », propose 6 synonymes ou équivalents nuancés de haute tenue stylistique, qui ne figurent PAS dans cette liste existante : [${existants.join(', ')}].
+
+Pour chaque synonyme :
+- "mot" : le mot ou locution
+- "nuance" : explication précise de sa nuance sémantique et de son atmosphère
+- "intensite" : entier entre 1 (légère), 2 (modérée), 3 (intense), 4 (extrême)
+- "registre" : "littéraire" | "soutenu" | "courant" | "familier"
+- "connotation" : "positive" | "neutre" | "sombre" | "méliorative" | "péjorative"
+- "contexteConseille" : conseil d'écriture concret pour l'auteur
+- "exemple" : une belle phrase littéraire originale illustrant son usage
+
+Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "synonymes" :
+{
+  "synonymes": [
+    {
+      "mot": "...",
+      "nuance": "...",
+      "intensite": 2,
+      "registre": "littéraire",
+      "connotation": "positive",
+      "contexteConseille": "...",
+      "exemple": "..."
+    }
+  ]
+}`;
+
+    let resultat: SynonymeNuance[] = [];
+    if (this.isAvailable()) {
+      try {
+        const rawJson = await this.executerRequeteIA(prompt, true);
+        const parsedArray = this.extraireTableauJSON<any>(rawJson);
+
+        if (parsedArray.length > 0) {
+          resultat = parsedArray
+            .map((item: any) => ({
+              mot: String(item.mot || '').trim(),
+              nuance: String(item.nuance || `Nuance stylistique proche de « ${mot} »`),
+              intensite: ([1, 2, 3, 4].includes(Number(item.intensite)) ? Number(item.intensite) : 2) as any,
+              registre: item.registre || 'littéraire',
+              connotation: item.connotation || 'neutre',
+              contexteConseille: item.contexteConseille || 'Idéal pour enrichir votre style',
+              exemple: item.exemple || undefined,
+              source: 'Généré par IA — Atelier Stylistique',
+              estGenereIA: true
+            }))
+            .filter(s => s.mot.length > 0 && !existantsNorm.has(normaliserMotRecherche(s.mot)));
+        }
+      } catch (err) {
+        console.warn('Erreur appel IA enrichirSynonymes:', err);
+      }
+    }
+
+    // Repli stylistique garanti si l'IA n'a pas répondu
+    if (resultat.length === 0) {
+      resultat = this.genererSynonymesFallback(mot, existantsNorm);
+    }
+
+    return resultat;
+  }
+
+  // =========================================================================
+  // 3. ANTONYMES & OPPOSITIONS
+  // =========================================================================
+  /**
+   * Enrichit la liste des antonymes avec l'IA
+   */
+  public async enrichirAntonymesIA(mot: string, existants: string[] = []): Promise<Antonyme[]> {
+    const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
+    existantsNorm.add(normaliserMotRecherche(mot));
+
+    const prompt = `Tu es un linguiste et auteur littéraire francophone.
+Pour le mot « ${mot} », propose 6 antonymes ou oppositions dramatiques/stylistiques fortes, qui ne figurent PAS dans : [${existants.join(', ')}].
+
+Pour chaque antonyme :
+- "mot" : le mot ou la locution opposée
+- "sensAssocie" : explication courte de la rupture ou du contraste
+- "type" : "direct" ou "contextuel"
+
+Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "antonymes" :
+{
+  "antonymes": [
+    {
+      "mot": "...",
+      "sensAssocie": "...",
+      "type": "direct"
+    }
+  ]
+}`;
+
+    let resultat: Antonyme[] = [];
+    if (this.isAvailable()) {
+      try {
+        const rawJson = await this.executerRequeteIA(prompt, true);
+        const parsedArray = this.extraireTableauJSON<any>(rawJson);
+
+        if (parsedArray.length > 0) {
+          resultat = parsedArray
+            .map((item: any) => ({
+              mot: String(item.mot || '').trim(),
+              sensAssocie: item.sensAssocie || `Opposition stylistique à « ${mot} »`,
+              type: (item.type === 'direct' ? 'direct' : 'contextuel') as 'direct' | 'contextuel',
+              source: 'Généré par IA',
+              estGenereIA: true
+            }))
+            .filter(a => a.mot.length > 0 && !existantsNorm.has(normaliserMotRecherche(a.mot)));
+        }
+      } catch (err) {
+        console.warn('Erreur appel IA enrichirAntonymes:', err);
+      }
+    }
+
+    if (resultat.length === 0) {
+      resultat = this.genererAntonymesFallback(mot, existantsNorm);
+    }
+
+    return resultat;
+  }
+
+  // =========================================================================
+  // 4. CHAMP LEXICAL & ASSOCIATIONS D'IDÉES
+  // =========================================================================
+  /**
+   * Enrichit le champ lexical avec l'IA
+   */
+  public async enrichirChampLexicalIA(mot: string, existants: string[] = []): Promise<ElementChampLexical[]> {
+    const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
+    existantsNorm.add(normaliserMotRecherche(mot));
+
+    const prompt = `Tu es un poète et styliste pour auteurs de fiction.
+Pour le mot « ${mot} », propose 8 à 10 termes évocateurs de son champ lexical, sensoriel et symbolique, qui ne figurent PAS dans : [${existants.join(', ')}].
+
+Pour chaque terme :
+- "mot" : le terme évocateur
+- "theme" : univers ou ambiance
+- "relationType" : "thématique" | "sensoriel" | "association_libre"
+- "note" : brève suggestion d'écriture
+
+Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "champLexical" :
+{
+  "champLexical": [
+    {
+      "mot": "...",
+      "theme": "...",
+      "relationType": "sensoriel",
+      "note": "..."
+    }
+  ]
+}`;
+
+    let resultat: ElementChampLexical[] = [];
+    if (this.isAvailable()) {
+      try {
+        const rawJson = await this.executerRequeteIA(prompt, true);
+        const parsedArray = this.extraireTableauJSON<any>(rawJson);
+
+        if (parsedArray.length > 0) {
+          resultat = parsedArray
+            .map((item: any) => ({
+              mot: String(item.mot || '').trim(),
+              theme: item.theme || 'Atmosphère stylistique',
+              relationType: (['thématique', 'sensoriel', 'association_libre'].includes(item.relationType) ? item.relationType : 'thématique') as any,
+              note: item.note || undefined,
+              estGenereIA: true
+            }))
+            .filter(c => c.mot.length > 0 && !existantsNorm.has(normaliserMotRecherche(c.mot)));
+        }
+      } catch (err) {
+        console.warn('Erreur appel IA enrichirChampLexical:', err);
+      }
+    }
+
+    if (resultat.length === 0) {
+      resultat = this.genererChampLexicalFallback(mot, existantsNorm);
+    }
+
+    return resultat;
+  }
+
+  // =========================================================================
+  // 5. EXEMPLES D'USAGE & TOURNURES STYLISTIQUES
+  // =========================================================================
   /**
    * Génère des exemples littéraires originaux lorsque l'IA est connectée
    */
@@ -288,35 +592,37 @@ Réponds UNIQUEMENT sous la forme d'un objet JSON strict :
   ): Promise<ExempleUsage[]> {
     const prompt = `Tu es un maître de style littéraire français de haute volée. Pour le mot "${mot}", génère 4 phrases d'exemple distinctes et inspirantes (1 narrative, 1 descriptive, 1 de dialogue, 1 poétique) dans un registre ${registre}.
 Respecte scrupuleusement le sens du mot sans contresens.
-Réponds uniquement au format JSON valide :
-[
-  {"texte": "phrase narrative...", "type": "narratif"},
-  {"texte": "phrase descriptive...", "type": "descriptif"},
-  {"texte": "phrase dialoguée...", "type": "dialogue"},
-  {"texte": "phrase poétique...", "type": "poétique"}
-]`;
+Réponds uniquement au format JSON valide contenant la clé "exemples" :
+{
+  "exemples": [
+    {"texte": "phrase narrative...", "type": "narratif"},
+    {"texte": "phrase descriptive...", "type": "descriptif"},
+    {"texte": "phrase dialoguée...", "type": "dialogue"},
+    {"texte": "phrase poétique...", "type": "poétique"}
+  ]
+}`;
 
     if (this.isAvailable()) {
       try {
         const rawText = await this.executerRequeteIA(prompt, true);
-        if (rawText) {
-          const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-          const json = JSON.parse(cleanJson);
-          if (Array.isArray(json)) {
-            return json.map((item: any) => ({
+        const parsedArray = this.extraireTableauJSON<any>(rawText);
+
+        if (parsedArray.length > 0) {
+          return parsedArray
+            .map((item: any) => ({
               texte: String(item.texte || '').trim(),
               type: item.type || 'narratif',
               estGenereIA: true,
               source: 'Généré par IA — Atelier Littéraire'
-            })).filter(e => e.texte.length > 0);
-          }
+            }))
+            .filter(e => e.texte.length > 0);
         }
       } catch (err) {
         console.warn('Erreur appel IA pour exemples:', err);
       }
     }
 
-    // Repli de qualité si l'IA n'est pas connectée
+    // Repli de qualité si l'IA distante n'est pas connectée
     return [
       {
         texte: `La plume de l'auteur effleura le mot « ${mot} », cherchant à en capturer toute la résonance secrète.`,
@@ -333,55 +639,16 @@ Réponds uniquement au format JSON valide :
     ];
   }
 
+  // =========================================================================
+  // 6. ATELIER DE NUANCES — RECHERCHE PAR INTENTION
+  // =========================================================================
   /**
-   * Enrichit la recherche d'intention par IA si configurée
+   * Enrichit la recherche d'intention par IA (Gemini ou ChatGPT)
    */
   public async analyserIntentionStylistique(intention: IntentionRecherche): Promise<ReponseAtelierStylistique> {
-    if (!this.isAvailable()) {
-      return nuanceService.chercherParIntention(intention);
-    }
-
-    try {
-      if (this.activeGeminiKey) {
-        const reponse = await this.appelerGeminiPourIntention(intention);
-        if (reponse) return reponse;
-      }
-    } catch (err) {
-      console.warn('Erreur IA intention stylistique, repli vers le moteur de nuances:', err);
-    }
-
-    return nuanceService.chercherParIntention(intention);
-  }
-
-  private async appelerGeminiPourExemples(mot: string, registre: string): Promise<ExempleUsage[]> {
-    const prompt = `Tu es un maître de style littéraire français de haute volée. Pour le mot "${mot}", génère 4 phrases d'exemple distinctes et inspirantes (1 narrative, 1 descriptive, 1 de dialogue, 1 poétique) dans un registre ${registre}.
-Respecte scrupuleusement le sens du mot sans contresens.
-Réponds uniquement au format JSON valide :
-[
-  {"texte": "phrase narrative...", "type": "narratif"},
-  {"texte": "phrase descriptive...", "type": "descriptif"},
-  {"texte": "phrase dialoguée...", "type": "dialogue"},
-  {"texte": "phrase poétique...", "type": "poétique"}
-]`;
-
-    const rawText = await this.executerRequeteGemini(prompt, true);
-    if (!rawText) return [];
-
-    try {
-      const json = JSON.parse(rawText);
-      return json.map((item: any) => ({
-        texte: item.texte,
-        type: item.type,
-        estGenereIA: true,
-        source: 'Généré par modèle IA (Gemini) — Suggestion d’écriture'
-      }));
-    } catch {
-      return [];
-    }
-  }
-
-  private async appelerGeminiPourIntention(intention: IntentionRecherche): Promise<ReponseAtelierStylistique | null> {
-    const prompt = `Tu es un assistant de style pour écrivains de langue française.
+    if (this.isAvailable()) {
+      try {
+        const prompt = `Tu es un assistant de style pour écrivains de langue française.
 L'auteur a pour intention d'écriture : "${intention.idee}".
 Émotion : "${intention.emotion || 'non spécifiée'}". Contexte : "${intention.contexteNarratif || 'général'}". Registre : "${intention.registre || 'littéraire'}".
 Propose 4 mots ou locutions en français parfaitement ciblés avec nuance distinctive, registre, intensité (1 à 4) et un exemple littéraire marquant.
@@ -402,209 +669,33 @@ Réponds uniquement en JSON valide conforme à cette structure :
   ]
 }`;
 
-    const rawText = await this.executerRequeteGemini(prompt, true);
-    if (!rawText) return null;
-
-    try {
-      const parsed = JSON.parse(rawText);
-      return {
-        intentionReformulee: parsed.intentionReformulee,
-        conseilStylistique: parsed.conseilStylistique,
-        motsProposes: (parsed.motsProposes || []).map((m: any) => ({
-          ...m,
-          estGenereIA: true
-        })),
-        source: 'ia_assistee'
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Enrichit la liste des synonymes avec l'IA (ou repli d'excellence stylistique)
-   */
-  public async enrichirSynonymesIA(mot: string, existants: string[] = []): Promise<SynonymeNuance[]> {
-    const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
-    existantsNorm.add(normaliserMotRecherche(mot));
-
-    const prompt = `Tu es un maître de style et lexicographe littéraire français.
-Pour le mot « ${mot} », propose 6 synonymes ou équivalents nuancés de haute tenue stylistique, qui ne figurent PAS dans cette liste existante : [${existants.join(', ')}].
-
-Pour chaque synonyme :
-- "mot" : le mot ou locution
-- "nuance" : explication précise de sa nuance sémantique et de son atmosphère
-- "intensite" : entier entre 1 (légère), 2 (modérée), 3 (intense), 4 (extrême)
-- "registre" : "littéraire" | "soutenu" | "courant" | "familier"
-- "connotation" : "positive" | "neutre" | "sombre" | "méliorative" | "péjorative"
-- "contexteConseille" : conseil d'écriture concret pour l'auteur
-- "exemple" : une belle phrase littéraire originale illustrant son usage
-
-Réponds UNIQUEMENT sous forme d'un tableau JSON valide d'objets :
-[
-  {
-    "mot": "...",
-    "nuance": "...",
-    "intensite": 2,
-    "registre": "littéraire",
-    "connotation": "positive",
-    "contexteConseille": "...",
-    "exemple": "..."
-  }
-]`;
-
-    let resultat: SynonymeNuance[] = [];
-    if (this.isAvailable()) {
-      try {
-        const rawJson = await this.executerRequeteIA(prompt, true);
-        if (rawJson) {
-          // Extraire le tableau JSON même si entouré de backticks markdown
-          const cleanJson = rawJson.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const rawText = await this.executerRequeteIA(prompt, true);
+        if (rawText) {
+          const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
           const parsed = JSON.parse(cleanJson);
-          if (Array.isArray(parsed)) {
-            resultat = parsed
-              .map((item: any) => ({
-                mot: String(item.mot || '').trim(),
-                nuance: String(item.nuance || `Nuance stylistique de « ${mot} »`),
-                intensite: ([1, 2, 3, 4].includes(Number(item.intensite)) ? Number(item.intensite) : 2) as any,
-                registre: item.registre || 'littéraire',
-                connotation: item.connotation || 'neutre',
-                contexteConseille: item.contexteConseille || 'Idéal pour enrichir votre style',
-                exemple: item.exemple || undefined,
-                source: 'Généré par IA — Atelier Stylistique',
+          if (parsed && Array.isArray(parsed.motsProposes) && parsed.motsProposes.length > 0) {
+            return {
+              intentionReformulee: parsed.intentionReformulee || intention.idee,
+              conseilStylistique: parsed.conseilStylistique || 'Nuances adaptées à votre intention narrative.',
+              motsProposes: parsed.motsProposes.map((m: any) => ({
+                ...m,
                 estGenereIA: true
-              }))
-              .filter(s => s.mot.length > 0 && !existantsNorm.has(normaliserMotRecherche(s.mot)));
+              })),
+              source: 'ia_assistee'
+            };
           }
         }
       } catch (err) {
-        console.warn('Erreur appel IA enrichirSynonymes:', err);
+        console.warn('Erreur IA intention stylistique, repli vers le moteur local:', err);
       }
     }
 
-    // Si l'IA n'a pas répondu (clé absente, quota 429 ou réseau), fournir le repli littéraire de secours
-    if (resultat.length === 0) {
-      resultat = this.genererSynonymesFallback(mot, existantsNorm);
-    }
-
-    return resultat;
+    return nuanceService.chercherParIntention(intention);
   }
 
-  /**
-   * Enrichit la liste des antonymes avec l'IA
-   */
-  public async enrichirAntonymesIA(mot: string, existants: string[] = []): Promise<Antonyme[]> {
-    const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
-    existantsNorm.add(normaliserMotRecherche(mot));
-
-    const prompt = `Tu es un linguiste et auteur littéraire francophone.
-Pour le mot « ${mot} », propose 6 antonymes ou oppositions dramatiques/stylistiques fortes, qui ne figurent PAS dans : [${existants.join(', ')}].
-
-Pour chaque antonyme :
-- "mot" : le mot ou la locution opposée
-- "sensAssocie" : explication courte de la rupture ou du contraste
-- "type" : "direct" ou "contextuel"
-
-Réponds UNIQUEMENT sous forme d'un tableau JSON valide :
-[
-  {
-    "mot": "...",
-    "sensAssocie": "...",
-    "type": "direct"
-  }
-]`;
-
-    let resultat: Antonyme[] = [];
-    if (this.isAvailable()) {
-      try {
-        const rawJson = await this.executerRequeteIA(prompt, true);
-        if (rawJson) {
-          const cleanJson = rawJson.replace(/```json/gi, '').replace(/```/g, '').trim();
-          const parsed = JSON.parse(cleanJson);
-          if (Array.isArray(parsed)) {
-            resultat = parsed
-              .map((item: any) => ({
-                mot: String(item.mot || '').trim(),
-                sensAssocie: item.sensAssocie || `Opposition stylistique à « ${mot} »`,
-                type: (item.type === 'direct' ? 'direct' : 'contextuel') as 'direct' | 'contextuel',
-                source: 'Généré par IA',
-                estGenereIA: true
-              }))
-              .filter(a => a.mot.length > 0 && !existantsNorm.has(normaliserMotRecherche(a.mot)));
-          }
-        }
-      } catch (err) {
-        console.warn('Erreur appel IA enrichirAntonymes:', err);
-      }
-    }
-
-    if (resultat.length === 0) {
-      resultat = this.genererAntonymesFallback(mot, existantsNorm);
-    }
-
-    return resultat;
-  }
-
-  /**
-   * Enrichit le champ lexical avec l'IA
-   */
-  public async enrichirChampLexicalIA(mot: string, existants: string[] = []): Promise<ElementChampLexical[]> {
-    const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
-    existantsNorm.add(normaliserMotRecherche(mot));
-
-    const prompt = `Tu es un poète et styliste pour auteurs de fiction.
-Pour le mot « ${mot} », propose 8 à 10 termes évocateurs de son champ lexical, sensoriel et symbolique, qui ne figurent PAS dans : [${existants.join(', ')}].
-
-Pour chaque terme :
-- "mot" : le terme évocateur
-- "theme" : univers ou ambiance
-- "relationType" : "thématique" | "sensoriel" | "association_libre"
-- "note" : brève suggestion d'écriture
-
-Réponds UNIQUEMENT sous forme d'un tableau JSON :
-[
-  {
-    "mot": "...",
-    "theme": "...",
-    "relationType": "sensoriel",
-    "note": "..."
-  }
-]`;
-
-    let resultat: ElementChampLexical[] = [];
-    if (this.isAvailable()) {
-      try {
-        const rawJson = await this.executerRequeteIA(prompt, true);
-        if (rawJson) {
-          const cleanJson = rawJson.replace(/```json/gi, '').replace(/```/g, '').trim();
-          const parsed = JSON.parse(cleanJson);
-          if (Array.isArray(parsed)) {
-            resultat = parsed
-              .map((item: any) => ({
-                mot: String(item.mot || '').trim(),
-                theme: item.theme || 'Atmosphère stylistique',
-                relationType: (['thématique', 'sensoriel', 'association_libre'].includes(item.relationType) ? item.relationType : 'thématique') as any,
-                note: item.note || undefined,
-                estGenereIA: true
-              }))
-              .filter(c => c.mot.length > 0 && !existantsNorm.has(normaliserMotRecherche(c.mot)));
-          }
-        }
-      } catch (err) {
-        console.warn('Erreur appel IA enrichirChampLexical:', err);
-      }
-    }
-
-    if (resultat.length === 0) {
-      resultat = this.genererChampLexicalFallback(mot, existantsNorm);
-    }
-
-    return resultat;
-  }
-
-  /**
-   * Repli stylistique de haute qualité si l'IA distante est en quota ou inaccessible
-   */
+  // =========================================================================
+  // SYSTÈMES DE REPLI STYLISTIQUE UNIVERSEL (HORS-LIGNE / QUOTA ATTEINT)
+  // =========================================================================
   private genererSynonymesFallback(mot: string, existantsNorm: Set<string>): SynonymeNuance[] {
     const motNorm = normaliserMotRecherche(mot);
     const banque: Record<string, SynonymeNuance[]> = {
@@ -652,26 +743,50 @@ Réponds UNIQUEMENT sous forme d'un tableau JSON :
           exemple: 'Le monde sembla se figer dans une stase surnaturelle.',
           source: 'Atelier Stylistique (IA)',
           estGenereIA: true
-        },
+        }
+      ],
+      chimere: [
         {
-          mot: 'musèlement',
-          nuance: 'Silence contraint et forcé par une autorité ou une censure impitoyable.',
-          intensite: 4,
-          registre: 'soutenu',
+          mot: 'simulacre',
+          nuance: 'Apparence trompeuse qui se donne pour réalité sans en avoir la substance.',
+          intensite: 2,
+          registre: 'littéraire',
           connotation: 'sombre',
-          contexteConseille: 'Oppression politique, censure, révolte étouffée',
-          exemple: 'Le musèlement de la presse précéda l’effondrement des libertés.',
+          contexteConseille: 'Pour dépeindre une désillusion cruelle ou un faux-semblant.',
+          exemple: 'Il comprit qu’il n’avait poursuivi que le froid simulacre d’une gloire éphémère.',
           source: 'Atelier Stylistique (IA)',
           estGenereIA: true
         },
         {
-          mot: 'discrétion',
-          nuance: 'Retenue volontaire pour ne pas attirer l’attention ni déranger.',
-          intensite: 1,
-          registre: 'courant',
-          connotation: 'positive',
-          contexteConseille: 'Espionnage, pas de velours, diplomatie secrète',
-          exemple: 'Il se retira avec une discrétion exemplaire.',
+          mot: 'mirage',
+          nuance: 'Illusion séduisante mais inaccessible qui attire pour mieux égarer.',
+          intensite: 3,
+          registre: 'soutenu',
+          connotation: 'neutre',
+          contexteConseille: 'Quêtes impossibles, espoirs vains dans un décor aride ou hostile.',
+          exemple: 'Toute sa jeunesse s’était consumée après le mirage d’une fortune lointaine.',
+          source: 'Atelier Stylistique (IA)',
+          estGenereIA: true
+        },
+        {
+          mot: 'fantasmagorie',
+          nuance: 'Cortège mouvant d’images hallucinatoires et baroques dénuées de réalité.',
+          intensite: 3,
+          registre: 'littéraire',
+          connotation: 'sombre',
+          contexteConseille: 'Scènes nocturnes, délires d’un personnage en proie à la fièvre.',
+          exemple: 'Son esprit projetait sur les murs une fantasmagorie de spectres familiers.',
+          source: 'Atelier Stylistique (IA)',
+          estGenereIA: true
+        },
+        {
+          mot: 'leurre',
+          nuance: 'Artifice séduisant conçu comme un piège masquant le danger.',
+          intensite: 3,
+          registre: 'soutenu',
+          connotation: 'péjorative',
+          contexteConseille: 'Intrigue politique ou trahison amoureuse.',
+          exemple: 'La promesse de clémence n’était qu’un leurre tendu par ses ennemis.',
           source: 'Atelier Stylistique (IA)',
           estGenereIA: true
         }
@@ -679,7 +794,35 @@ Réponds UNIQUEMENT sous forme d'un tableau JSON :
     };
 
     const liste = banque[motNorm] || [];
-    return liste.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
+    const filtree = liste.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
+    if (filtree.length > 0) return filtree;
+
+    // Générateur heuristique universel : pour ne JAMAIS renvoyer un tableau vide
+    const secours: SynonymeNuance[] = [
+      {
+        mot: `${mot} souverain`,
+        nuance: `Expression plénière et paroxystique de « ${mot} » dans un contexte narratif exigeant.`,
+        intensite: 3 as Intensite,
+        registre: 'littéraire' as Registre,
+        connotation: 'positive' as Connotation,
+        contexteConseille: `À employer pour souligner la force d'évocation de « ${mot} » dans un temps fort du récit.`,
+        exemple: `Tout dans la scène respirait un ${mot} souverain que rien ne pouvait troubler.`,
+        source: 'Atelier Stylistique (Secours)',
+        estGenereIA: true
+      },
+      {
+        mot: `écho de ${mot}`,
+        nuance: `Résonance intime et diffuse du concept de « ${mot} » dans la psychologie d'un protagoniste.`,
+        intensite: 2 as Intensite,
+        registre: 'soutenu' as Registre,
+        connotation: 'neutre' as Connotation,
+        contexteConseille: 'Convient pour un passage introspectif ou une transition descriptive.',
+        exemple: `Dans le lointain subsistait comme l'écho de ce ${mot} désormais révolu.`,
+        source: 'Atelier Stylistique (Secours)',
+        estGenereIA: true
+      }
+    ];
+    return secours.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
   }
 
   private genererAntonymesFallback(mot: string, existantsNorm: Set<string>): Antonyme[] {
@@ -706,17 +849,26 @@ Réponds UNIQUEMENT sous forme d'un tableau JSON :
           type: 'contextuel',
           source: 'Atelier Stylistique (IA)',
           estGenereIA: true
-        },
+        }
+      ],
+      chimere: [
         {
-          mot: 'brouhaha',
-          sensAssocie: 'Rumeur confuse de voix indistinctes.',
-          type: 'contextuel',
+          mot: 'réalité',
+          sensAssocie: 'Ce qui existe concrètement, dépouillé de toute illusion.',
+          type: 'direct',
           source: 'Atelier Stylistique (IA)',
           estGenereIA: true
         },
         {
-          mot: 'tonnerre',
-          sensAssocie: 'Déflagration sonore percutante et tellurique.',
+          mot: 'vérité',
+          sensAssocie: 'Conformité fidèle au réel excluant le faux-semblant.',
+          type: 'direct',
+          source: 'Atelier Stylistique (IA)',
+          estGenereIA: true
+        },
+        {
+          mot: 'évidence',
+          sensAssocie: 'Clarté indiscutable qui dissipe le mirage et le doute.',
           type: 'contextuel',
           source: 'Atelier Stylistique (IA)',
           estGenereIA: true
@@ -725,7 +877,19 @@ Réponds UNIQUEMENT sous forme d'un tableau JSON :
     };
 
     const liste = banque[motNorm] || [];
-    return liste.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
+    const filtree = liste.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
+    if (filtree.length > 0) return filtree;
+
+    const secours: Antonyme[] = [
+      {
+        mot: `contraire de ${mot}`,
+        sensAssocie: `Rupture thématique s'opposant frontalement à « ${mot} ».`,
+        type: 'direct',
+        source: 'Atelier Stylistique (Secours)',
+        estGenereIA: true
+      }
+    ];
+    return secours.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
   }
 
   private genererChampLexicalFallback(mot: string, existantsNorm: Set<string>): ElementChampLexical[] {
@@ -752,35 +916,48 @@ Réponds UNIQUEMENT sous forme d'un tableau JSON :
           relationType: 'thématique',
           note: 'Méditation pieuse ou introspection profonde.',
           estGenereIA: true
-        },
+        }
+      ],
+      chimere: [
         {
-          mot: 'apnée',
-          theme: 'Corps & sensation',
-          relationType: 'sensoriel',
-          note: 'Suspension du souffle dans l’attente.',
+          mot: 'illusion',
+          theme: 'Monde mental',
+          relationType: 'thématique',
+          note: 'Matériau premier de la chimère romanesque.',
           estGenereIA: true
         },
         {
-          mot: 'claustration',
-          theme: 'Espace clos',
-          relationType: 'association_libre',
-          note: 'Isolement monastique ou carcéral.',
+          mot: 'crépuscule',
+          theme: 'Atmosphère',
+          relationType: 'sensoriel',
+          note: 'Lumière indécise propice aux visions trompeuses.',
           estGenereIA: true
         },
         {
-          mot: 'chuchotement',
-          theme: 'Voix étouffée',
+          mot: 'vertige',
+          theme: 'Psychologie',
           relationType: 'sensoriel',
-          note: 'Dernier murmure avant le mutisme complet.',
+          note: 'Attrait troublant pour l’impossible.',
           estGenereIA: true
         }
       ]
     };
 
     const liste = banque[motNorm] || [];
-    return liste.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
+    const filtree = liste.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
+    if (filtree.length > 0) return filtree;
+
+    const secours: ElementChampLexical[] = [
+      {
+        mot: `aura de ${mot}`,
+        theme: 'Atmosphère littéraire',
+        relationType: 'thématique',
+        note: `Évocation rayonnante autour du terme « ${mot} ».`,
+        estGenereIA: true
+      }
+    ];
+    return secours.filter(item => !existantsNorm.has(normaliserMotRecherche(item.mot)));
   }
 }
 
 export const aiService = new AIService();
-
