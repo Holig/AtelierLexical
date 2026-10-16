@@ -1,7 +1,11 @@
 import React from 'react';
 import { Feather, ExternalLink, ShieldCheck } from 'lucide-react';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onNavigateAdmin?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onNavigateAdmin }) => {
   return (
     <footer className="app-footer">
       <div className="footer-inner">
@@ -25,6 +29,18 @@ export const Footer: React.FC = () => {
               <span>Données : Wiktionnaire (CC BY-SA 4.0)</span>
               <ExternalLink size={12} />
             </a>
+
+            {onNavigateAdmin && (
+              <button
+                type="button"
+                onClick={onNavigateAdmin}
+                className="license-link"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                title="Gérer le lien de soutien et les paramètres d'administration"
+              >
+                <span>Administration</span>
+              </button>
+            )}
           </div>
         </div>
 

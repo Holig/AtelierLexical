@@ -99,7 +99,7 @@ export class WiktionaryService {
       });
 
       if (searchRes.ok) {
-        const searchData = await searchRes.json();
+        const searchData: any = await searchRes.json();
         const searchResults: any[] = searchData?.query?.search || [];
         for (const item of searchResults) {
           const titre = item.title;
@@ -141,7 +141,7 @@ export class WiktionaryService {
         return null;
       }
 
-      const json = await response.json();
+      const json: any = await response.json();
       if (!json.parse || !json.parse.wikitext || !json.parse.wikitext['*']) {
         return null;
       }
@@ -209,7 +209,7 @@ export class WiktionaryService {
     const matchEtym = texteFr.match(/===\s*\{\{S\|[ée]tymologie\}\}\s*===([\s\S]*?)(?=\n\s*===|$)/i);
     if (matchEtym) {
       etymologie = nettoyerWikitext(matchEtym[1]).replace(/^:\s*/, '').trim();
-      if (etymologie.length > 500) {
+      if (etymologie && etymologie.length > 500) {
         etymologie = etymologie.slice(0, 500) + '...';
       }
     }

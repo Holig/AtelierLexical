@@ -193,3 +193,25 @@ export interface CollectionEcriture {
   couleur?: string;
   dateCreation: string;
 }
+
+/**
+ * Configuration du Don & Soutien
+ */
+export interface DonationPublicConfig {
+  enabled: boolean;
+  url: string | null;
+  label: string;
+}
+
+export interface DonationAdminConfig extends DonationPublicConfig {
+  updatedAt?: string;
+  notes?: string;
+}
+
+export interface AdminAuthResponse {
+  success: boolean;
+  token?: string;
+  expiresIn?: string;
+  message?: string;
+}
+

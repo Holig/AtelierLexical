@@ -6,7 +6,10 @@ import {
   ExempleUsage,
   SynonymeNuance,
   Antonyme,
-  ElementChampLexical
+  ElementChampLexical,
+  DonationPublicConfig,
+  DonationAdminConfig,
+  AdminAuthResponse
 } from '../../../shared/types';
 
 // Cache mémoire en session pour les fiches lexicales (permet une navigation instantanée sans rechargement)
@@ -171,4 +174,143 @@ export class ApiClient {
     }
     return res.json();
   }
+
+  // ==========================================
+  // Gestion du Soutien / Don & Administration
+  // ==========================================
+
+  public static getAdminToken(): string | null {
+    return sessionStorage.getItem('atelier_admin_token');
+  }
+
+  public static setAdminToken(token: string): void {
+    sessionStorage.setItem('atelier_admin_token', token);
+  }
+
+  public static clearAdminToken(): void {
+    sessionStorage.removeItem('atelier_admin_token');
+  }
+
+  /**
+   * Récupération publique de la configuration du don (pour la page d'accueil)
+   */
+  public static async getDonationConfig(): Promise<DonationPublicConfig> {
+    try {
+      const res = await fetch('/api/donation');
+      if (!res.ok) {
+        return { enabled: false, url: null, label: 'Soutenir le projet' };
+      }
+      return res.json();
+    } catch {
+      return { enabled: false, url: null, label: 'Soutenir le projet' };
+    }
+  }
+
+  /**
+   * Connexion administrateur
+   */
+  public static async adminLogin(password: string): Promise<AdminAuthResponse> {
+    const res = await fetch('/api/admin/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, message: data.error || 'Mot de passe incorrect' };
+    }
+    if (data.token) {
+      ApiClient.setAdminToken(data.token);
+    }
+    return { success: true, token: data.token, message: data.message };
+  }
+
+  /**
+   * Déconnexion administrateur
+   */
+  public static async adminLogout(): Promise<void> {
+    const token = ApiClient.getAdminToken();
+    if (token) {
+      await fetch('/api/admin/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => {});
+    }
+    ApiClient.clearAdminToken();
+  }
+
+  /**
+   * Vérification du token d'administration actuel
+   */
+  public static async verifyAdminAuth(): Promise<boolean> {
+    const token = ApiClient.getAdminToken();
+    if (!token) return false;
+    try {
+      const res = await fetch('/api/admin/auth/verify', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Consultation complète de la configuration du don (admin)
+   */
+  public static async getAdminDonationConfig(): Promise<DonationAdminConfig> {
+    const token = ApiClient.getAdminToken();
+    if (!token) throw new Error('Non authentifié');
+    const res = await fetch('/api/admin/donation', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Erreur lors de la récupération de la configuration');
+    }
+    return res.json();
+  }
+
+  /**
+   * Mise à jour de la configuration du don (admin)
+   */
+  public static async updateAdminDonationConfig(data: {
+    enabled: boolean;
+    url: string | null;
+    label?: string;
+  }): Promise<{ success: boolean; config?: DonationAdminConfig; error?: string }> {
+    const token = ApiClient.getAdminToken();
+    if (!token) return { success: false, error: 'Non authentifié' };
+    const res = await fetch('/api/admin/donation', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    const resData = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: resData.error || 'Erreur lors de la mise à jour' };
+    }
+    return resData;
+  }
+
+  /**
+   * Réinitialisation de la configuration du don (admin)
+   */
+  public static async resetAdminDonationConfig(): Promise<{ success: boolean; config?: DonationAdminConfig; error?: string }> {
+    const token = ApiClient.getAdminToken();
+    if (!token) return { success: false, error: 'Non authentifié' };
+    const res = await fetch('/api/admin/donation', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const resData = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: resData.error || 'Erreur lors de la réinitialisation' };
+    }
+    return resData;
+  }
 }
+

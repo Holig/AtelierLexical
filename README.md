@@ -4,10 +4,17 @@
 
 [![Licence: MIT](https://img.shields.io/badge/Licence-MIT-amber.svg)](LICENSE)
 [![Données: Wiktionnaire CC BY-SA 4.0](https://img.shields.io/badge/Donn%C3%A9es-Wiktionnaire%20(CC%20BY--SA%204.0)-blue.svg)](https://fr.wiktionary.org)
-[![Tests: Vitest](https://img.shields.io/badge/Tests-15%2F15%20passing-success.svg)](https://vitest.dev)
+[![Tests: Vitest](https://img.shields.io/badge/Tests-21%2F21%20passing-success.svg)](https://vitest.dev)
+[![Extension Navigateur](https://img.shields.io/badge/Extension-Chrome%20%26%20Firefox-orange.svg)](extension/README.md)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Holig%2FAtelier--Lexical-181717.svg?logo=github)](https://github.com/Holig/Atelier-Lexical)
 
 L'**Atelier Lexical** est une application web conçue spécialement pour les écrivains, romanciers, poètes, traducteurs et passionnés de langue française. Loin d'un simple dictionnaire de définitions ou de synonymes génériques, il s'agit d'un véritable établi d'artisan des mots permettant d'explorer le vocabulaire dans toute sa profondeur sémantique, stylistique et narrative.
+
+L'application comprend désormais :
+1. Une **Page d'Accueil immersive** orientée vers la découverte et la recherche immédiate.
+2. Une **Extension pour navigateur (Chrome & Firefox)** pour rechercher n'importe quel mot d'un simple clic droit.
+3. Un **Bouton de Soutien & Don** configurable côté serveur via une interface d'administration protégée.
+
 
 ---
 
@@ -49,6 +56,29 @@ L'**Atelier Lexical** est une application web conçue spécialement pour les éc
 - **Modes Thématiques** : Thème sombre (*Bibliothèque nocturne*) et thème clair (*Papier vélin*) avec transitions fluides.
 - **Modale « À Propos »** : Accessible directement depuis l'en-tête (bouton information à côté du thème) présentant la vocation et le fonctionnement de l'application sous 2 volets interactifs (*Fonctionnel* et *Technique*).
 - **Module IA Hybride Optionnel** : Compatible Google Gemini et OpenAI pour enrichir les exemples stylistiques, avec persistance sécurisée des clés API et indicateur de statut en temps réel. Fonctionne à 100% sans clé IA requise.
+
+### 🌟 Page d'Accueil Immersive & Découverte
+- **Première page d'entrée** : Accessible directement à la racine `/`.
+- **Hero orienté action** : Titre accrocheur, courte présentation et barre de recherche intégrée immédiatement active pour amener le visiteur en un clic vers la fiche lexicale d'un mot.
+- **Pépites et suggestions d'exploration** (*clair-obscur*, *silence*, *labyrinthe*, *crépuscule*, *mélancolie*, *chimère*).
+- **Présentation ciblée des publics** (Écrivains, Étudiants & Enseignants, Rédacteurs & Professionnels).
+- **Section dédiée à l'extension navigateur** avec démonstration visuelle du clic droit et lien de téléchargement direct.
+- **Section Soutien & Don** pilotée en temps réel par la configuration serveur (masquage propre si aucun lien n'est configuré).
+- **Navigation préservée** : L'Atelier reste accessible à tout instant via le bouton « Ouvrir l'Atelier », la route `/app` ou la recherche directe `/?q=...`.
+
+### 🧩 Extension Navigateur (Chrome & Firefox)
+- **Recherche par clic droit** : Sur n'importe quelle page web, sélectionnez un mot, effectuez un clic droit et choisissez « *Rechercher « ... » dans l'Atelier Lexical* ». Un nouvel onglet s'ouvre directement sur la fiche du mot.
+- **Nettoyage automatique intelligent** : Suppression de la ponctuation, prise en charge des élisions françaises (*l'aventure* $\rightarrow$ *aventure*, *d’écriture* $\rightarrow$ *écriture*), préservation stricte des accents (`é`, `è`, `ê`, `à`, `ç`, `ô`, `î`, `ù`), des ligatures (`œ`, `æ`) et des tirets de mots composés (*clair-obscur*).
+- **Popup rapide & Options** : Mini-barre de recherche dans la popup et page d'options pour configurer l'URL de l'Atelier Lexical (local `http://localhost:5173` ou distant).
+- **Génération du package** : `npm run package:extension` pour créer le fichier `dist/atelier-lexical-extension.zip`.
+- **Guide complet d'installation** : Disponible dans [extension/README.md](file:///extension/README.md).
+
+### 🛡️ Administration du Lien de Don & Sécurité Serveur
+- **Route dédiée `/admin`** : Protégée par mot de passe administrateur (`ADMIN_PASSWORD` dans `.env`).
+- **Sécurité côté serveur** : Émission d'un token cryptographique de session (durée 24h) ; rejet strict (401 Unauthorized) de tout accès non autorisé à l'API `/api/admin/*`.
+- **Validation stricte des URLs** : Obligation d'une URL absolue débutant par `https://` ; rejet systématique des protocoles malveillants (`javascript:`, `data:`).
+- **Persistance immédiate** : Les modifications sont enregistrées dans `server/src/data/app-config.json`, survivent aux redémarrages et sont immédiatement prises en compte par la page d'accueil sans aucun redéploiement.
+- **Gestion du statut** : Activation, désactivation ou suppression du lien en 1 clic.
 
 ---
 

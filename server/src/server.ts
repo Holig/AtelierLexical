@@ -4,6 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { lexiqueRouter } from './routes/lexique.routes';
+import { donationRouter } from './routes/donation.routes';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,7 @@ app.use((req, _res, next) => {
 
 // Montage de l'API
 app.use('/api', lexiqueRouter);
+app.use('/api', donationRouter);
 
 // Servir le client en production si le dossier dist existe
 const clientDistPath = path.resolve(__dirname, '../../dist');

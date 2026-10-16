@@ -138,7 +138,7 @@ export class AIService {
 
         const latencyMs = Date.now() - t0;
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
+          const errData: any = await res.json().catch(() => ({}));
           const errMsg = errData?.error?.message || `Erreur HTTP ${res.status}`;
           return { success: false, message: `OpenAI a refusé la requête : ${errMsg}`, latencyMs };
         }
@@ -188,7 +188,7 @@ export class AIService {
         });
 
         if (res.ok) {
-          const data = await res.json();
+          const data: any = await res.json();
           const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (rawText) return rawText;
         }
@@ -219,7 +219,7 @@ export class AIService {
         body: JSON.stringify(body)
       });
       if (res.ok) {
-        const data = await res.json();
+        const data: any = await res.json();
         return data?.choices?.[0]?.message?.content || null;
       }
     } catch {
@@ -526,7 +526,7 @@ Réponds UNIQUEMENT sous forme d'un tableau JSON valide :
               .map((item: any) => ({
                 mot: String(item.mot || '').trim(),
                 sensAssocie: item.sensAssocie || `Opposition stylistique à « ${mot} »`,
-                type: item.type === 'direct' ? 'direct' : 'contextuel',
+                type: (item.type === 'direct' ? 'direct' : 'contextuel') as 'direct' | 'contextuel',
                 source: 'Généré par IA',
                 estGenereIA: true
               }))

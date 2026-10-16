@@ -5,7 +5,8 @@ import {
   MotMorphologique,
   ElementChampLexical,
   ExpressionLocution,
-  ExempleUsage
+  ExempleUsage,
+  CategorieGrammaticale
 } from '../../../shared/types';
 import { wiktionaryService, WiktionaryParsedData } from './wiktionary.service';
 import { nuanceService } from './nuance.service';
@@ -61,7 +62,7 @@ export class LexiconService {
     }
 
     const motAffiche = wiktionaryData.mot || motNormalise;
-    const categories = wiktionaryData.categories && wiktionaryData.categories.length > 0
+    const categories: CategorieGrammaticale[] = (wiktionaryData.categories && wiktionaryData.categories.length > 0)
       ? wiktionaryData.categories
       : ['nom'];
     const estVerbe = categories.includes('verbe') || motNormalise.endsWith('er') || motNormalise.endsWith('ir');

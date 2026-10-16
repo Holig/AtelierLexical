@@ -1,5 +1,5 @@
 import React from 'react';
-import { Feather, BookOpen, Sparkles, Bookmark, Sun, Moon, Info } from 'lucide-react';
+import { Feather, BookOpen, Sparkles, Bookmark, Sun, Moon, Info, Home } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'lexique' | 'studio' | 'notebook';
@@ -8,6 +8,7 @@ interface HeaderProps {
   toggleTheme: () => void;
   favoritesCount: number;
   onLogoClick: () => void;
+  onNavigateHome?: () => void;
   onOpenAiModal: () => void;
   onOpenAboutModal: () => void;
   aiStatus: { isConfigured: boolean; provider: string };
@@ -85,6 +86,17 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <span className={`ai-status-dot ${aiStatus.isConfigured ? 'online' : 'offline'}`} />
           </button>
+
+          {onNavigateHome && (
+            <button
+              className="icon-btn"
+              onClick={onNavigateHome}
+              title="Retourner à la page d'accueil de présentation"
+              aria-label="Page d'accueil"
+            >
+              <Home size={18} />
+            </button>
+          )}
 
           <button
             className="icon-btn"

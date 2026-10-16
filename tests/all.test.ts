@@ -157,3 +157,122 @@ describe('4. Service lexical & sources vérifiables', () => {
     expect(fiche).toBeNull();
   });
 });
+
+describe('5. Configuration du don & Sécurité de l\'administration', () => {
+  it('doit valider strictement les URLs HTTPS et rejeter les protocoles dangereux', async () => {
+    const { configService } = await import('../server/src/services/config.service');
+
+    // Valide : URL HTTPS absolue
+    expect(configService.validateDonationUrl('https://ko-fi.com/monprojet').isValid).toBe(true);
+    expect(configService.validateDonationUrl('https://fr.tipeee.com/monprojet').isValid).toBe(true);
+
+    // Valide : URL vide ou null (permet de désactiver)
+    expect(configService.validateDonationUrl('').isValid).toBe(true);
+    expect(configService.validateDonationUrl(null).isValid).toBe(true);
+
+    // Invalide : protocoles dangereux
+    expect(configService.validateDonationUrl('javascript:alert(1)').isValid).toBe(false);
+    expect(configService.validateDonationUrl('data:text/html,hack').isValid).toBe(false);
+
+    // Invalide : HTTP non sécurisé externe
+    expect(configService.validateDonationUrl('http://insecure-site.com/don').isValid).toBe(false);
+
+    // Invalide : chaîne quelconque sans protocole
+    expect(configService.validateDonationUrl('ko-fi.com/monprojet').isValid).toBe(false);
+    expect(configService.validateDonationUrl('not a url').isValid).toBe(false);
+  });
+
+  it('doit authentifier l\'administrateur et rejeter les mauvais mots de passe', async () => {
+    const { configService } = await import('../server/src/services/config.service');
+
+    // Mauvais mot de passe
+    const failRes = configService.authenticateAdmin('mauvais_mot_de_passe');
+    expect(failRes.success).toBe(false);
+    expect(failRes.token).toBeUndefined();
+
+    // Bon mot de passe
+    const validPassword = process.env.ADMIN_PASSWORD || 'atelier-lexical-admin-2026';
+    const successRes = configService.authenticateAdmin(validPassword);
+    expect(successRes.success).toBe(true);
+    expect(successRes.token).toBeDefined();
+
+    // Validation du token émis
+    expect(configService.verifyAdminToken(successRes.token)).toBe(true);
+    expect(configService.verifyAdminToken('faux-token')).toBe(false);
+
+    // Révocation de session
+    if (successRes.token) {
+      configService.revokeToken(successRes.token);
+      expect(configService.verifyAdminToken(successRes.token)).toBe(false);
+    }
+  });
+
+  it('doit mettre à jour, persister et réinitialiser la configuration de don', async () => {
+    const { configService } = await import('../server/src/services/config.service');
+
+    // Mise à jour avec URL valide
+    const updateRes = configService.updateDonationConfig({
+      enabled: true,
+      url: 'https://ko-fi.com/atelierlexical',
+      label: 'Offrir un café à l\'Atelier'
+    });
+    expect(updateRes.success).toBe(true);
+    expect(updateRes.config?.enabled).toBe(true);
+    expect(updateRes.config?.url).toBe('https://ko-fi.com/atelierlexical');
+    expect(updateRes.config?.label).toBe('Offrir un café à l\'Atelier');
+
+    // Configuration publique (visible sur la landing page)
+    const pub = configService.getPublicDonationConfig();
+    expect(pub.enabled).toBe(true);
+    expect(pub.url).toBe('https://ko-fi.com/atelierlexical');
+    expect(pub.label).toBe('Offrir un café à l\'Atelier');
+
+    // Réinitialisation
+    const resetRes = configService.resetDonationConfig();
+    expect(resetRes.enabled).toBe(false);
+    expect(resetRes.url).toBeNull();
+
+    const pubAfterReset = configService.getPublicDonationConfig();
+    expect(pubAfterReset.enabled).toBe(false);
+    expect(pubAfterReset.url).toBeNull();
+  });
+});
+
+describe('6. Extension pour navigateur : Normalisation du texte sélectionné', () => {
+  // Teste la logique de normalisation de l'extension
+  function nettoyerSelectionExtension(texte: string): string {
+    if (!texte || typeof texte !== 'string') return '';
+    let propre = texte.trim();
+    if (!propre) return '';
+    propre = propre.replace(/^[«"'({\[\s]+|[»"')}\]\s.,;:!?]+$/g, '');
+    const regexElision = /^(?:[ldscnjmLDSCNJM]|qu|QU)['’](.+)$/i;
+    const matchElision = propre.match(regexElision);
+    if (matchElision && matchElision[1] && matchElision[1].trim().length > 1) {
+      propre = matchElision[1].trim();
+    }
+    if (propre.length > 60) {
+      propre = propre.slice(0, 60).replace(/\s+\S*$/, '');
+    }
+    return propre.trim();
+  }
+
+  it('doit nettoyer la ponctuation et guillemets encadrants', () => {
+    expect(nettoyerSelectionExtension('« clair-obscur »')).toBe('clair-obscur');
+    expect(nettoyerSelectionExtension('"silence",')).toBe('silence');
+    expect(nettoyerSelectionExtension('(mélancolie)...')).toBe('mélancolie');
+  });
+
+  it('doit extraire le mot d\'une élision française avec apostrophe droite ou typographique', () => {
+    expect(nettoyerSelectionExtension("l'aventure")).toBe('aventure');
+    expect(nettoyerSelectionExtension("d’écriture")).toBe('écriture');
+    expect(nettoyerSelectionExtension("s'enfuir")).toBe('enfuir');
+    expect(nettoyerSelectionExtension("qu'importe")).toBe('importe');
+  });
+
+  it('doit préserver les accents, les ligatures et les tirets de mots composés', () => {
+    expect(nettoyerSelectionExtension('clair-obscur')).toBe('clair-obscur');
+    expect(nettoyerSelectionExtension('cœur')).toBe('cœur');
+    expect(nettoyerSelectionExtension('éphémère')).toBe('éphémère');
+  });
+});
+

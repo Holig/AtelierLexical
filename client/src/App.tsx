@@ -6,6 +6,8 @@ import { StylisticStudio } from './components/StylisticStudio';
 import { WriterNotebook } from './components/WriterNotebook';
 import { AIConfigModal } from './components/AIConfigModal';
 import { AboutModal } from './components/AboutModal';
+import { LandingPage } from './components/LandingPage';
+import { AdminDonationPage } from './components/AdminDonationPage';
 import { Footer } from './components/Footer';
 import { ApiClient } from './services/api';
 import { StorageService } from './services/storage.service';
@@ -13,6 +15,19 @@ import { FicheLexicale } from '../../shared/types';
 import { Feather, Sparkles, BookOpen, AlertCircle, Compass, LayoutGrid, LayoutList, Columns2, Columns3, Columns4 } from 'lucide-react';
 
 export const App: React.FC = () => {
+  const getInitialView = (): 'landing' | 'app' | 'admin' => {
+    const path = window.location.pathname.toLowerCase();
+    const search = new URLSearchParams(window.location.search);
+    if (path === '/admin' || path === '/administration') {
+      return 'admin';
+    }
+    if (search.get('q') || path === '/app' || path === '/recherche') {
+      return 'app';
+    }
+    return 'landing';
+  };
+
+  const [currentView, setCurrentView] = useState<'landing' | 'app' | 'admin'>(getInitialView);
   const [activeTab, setActiveTab] = useState<'lexique' | 'studio' | 'notebook'>('lexique');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [currentWord, setCurrentWord] = useState<string>('');
@@ -65,10 +80,46 @@ export const App: React.FC = () => {
     StorageService.setTheme(next);
   };
 
+  const navigateToLanding = () => {
+    setCurrentView('landing');
+    setCurrentWord('');
+    setCurrentFiche(null);
+    setErrorInfo(null);
+    setNavigationTrail([]);
+    const url = new URL(window.location.href);
+    url.pathname = '/';
+    url.searchParams.delete('q');
+    window.history.pushState({ view: 'landing' }, '', url.toString());
+  };
+
+  const navigateToApp = (word?: string) => {
+    setCurrentView('app');
+    if (word) {
+      handleDirectSearch(word);
+    } else {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.get('q')) {
+        url.pathname = '/app';
+        window.history.pushState({ view: 'app' }, '', url.toString());
+      }
+    }
+  };
+
+  const navigateToAdmin = () => {
+    setCurrentView('admin');
+    const url = new URL(window.location.href);
+    url.pathname = '/admin';
+    url.searchParams.delete('q');
+    window.history.pushState({ view: 'admin' }, '', url.toString());
+  };
+
   const performSearch = async (mot: string, updateHistoryState: boolean = true) => {
     if (!mot || !mot.trim()) return;
     const clean = mot.trim();
     const key = clean.toLowerCase();
+
+    // Basculer sur la vue de l'application
+    setCurrentView('app');
 
     // 1. VÉRIFICATION DU CACHE EN MÉMOIRE : Résolution instantanée (0 ms, aucun spinner ni rechargement)
     const cached = ApiClient.getCachedFiche(key);
@@ -82,7 +133,7 @@ export const App: React.FC = () => {
       if (updateHistoryState) {
         const url = new URL(window.location.href);
         url.searchParams.set('q', cached.mot);
-        window.history.pushState({ word: cached.mot }, '', url.toString());
+        window.history.pushState({ view: 'app', word: cached.mot }, '', url.toString());
       }
       StorageService.addToHistory(cached.mot);
       return;
@@ -97,7 +148,7 @@ export const App: React.FC = () => {
     if (updateHistoryState) {
       const url = new URL(window.location.href);
       url.searchParams.set('q', clean);
-      window.history.pushState({ word: clean }, '', url.toString());
+      window.history.pushState({ view: 'app', word: clean }, '', url.toString());
     }
 
     try {
@@ -120,6 +171,7 @@ export const App: React.FC = () => {
   const handleDirectSearch = async (mot: string) => {
     if (!mot || !mot.trim()) return;
     const clean = mot.trim();
+    setCurrentView('app');
     setNavigationTrail([clean]);
     await performSearch(clean);
   };
@@ -131,7 +183,6 @@ export const App: React.FC = () => {
     setNavigationTrail(prev => {
       const existingIdx = prev.findIndex(w => w.toLowerCase() === clean.toLowerCase());
       if (existingIdx !== -1) {
-        // Si le mot est déjà dans l'historique, on coupe jusqu'à ce mot
         return prev.slice(0, existingIdx + 1);
       }
       return [...prev, clean];
@@ -143,7 +194,7 @@ export const App: React.FC = () => {
   const handleGoBack = async () => {
     if (navigationTrail.length <= 1) return;
     const newTrail = [...navigationTrail];
-    newTrail.pop(); // Retire le mot actuel
+    newTrail.pop();
     const prevWord = newTrail[newTrail.length - 1];
     setNavigationTrail(newTrail);
     await performSearch(prevWord);
@@ -158,29 +209,53 @@ export const App: React.FC = () => {
     await performSearch(targetWord);
   };
 
-  // Initialisation du mot depuis l'URL au chargement
+  // Initialisation du mot et de la vue depuis l'URL au chargement
   useEffect(() => {
+    const path = window.location.pathname.toLowerCase();
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
-    if (q) {
+    if (path === '/admin' || path === '/administration') {
+      setCurrentView('admin');
+    } else if (q) {
+      setCurrentView('app');
       setNavigationTrail([q]);
       performSearch(q, false);
+    } else if (path === '/app' || path === '/recherche') {
+      setCurrentView('app');
+    } else {
+      setCurrentView('landing');
     }
   }, []);
 
   // Écoute de l'historique du navigateur (boutons Précédent/Suivant)
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
+      const path = window.location.pathname.toLowerCase();
       const params = new URLSearchParams(window.location.search);
       const q = params.get('q') || e.state?.word;
+
+      if (path === '/admin' || path === '/administration' || e.state?.view === 'admin') {
+        setCurrentView('admin');
+        return;
+      }
+
       if (q) {
+        setCurrentView('app');
         setNavigationTrail(prev => {
           const idx = prev.findIndex(w => w.toLowerCase() === q.toLowerCase());
           if (idx !== -1) return prev.slice(0, idx + 1);
           return [q];
         });
         performSearch(q, false);
+        return;
       }
+
+      if (path === '/app' || path === '/recherche' || e.state?.view === 'app') {
+        setCurrentView('app');
+        return;
+      }
+
+      setCurrentView('landing');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -196,6 +271,40 @@ export const App: React.FC = () => {
     currentFiche && StorageService.isFavorite(currentFiche.mot)
   );
 
+  // 1. Vue Accueil / Landing Page
+  if (currentView === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onSearchWord={(word) => navigateToApp(word)}
+          onOpenApp={() => navigateToApp()}
+          onOpenAboutModal={() => setShowAboutModal(true)}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          onNavigateAdmin={navigateToAdmin}
+        />
+        {showAboutModal && (
+          <AboutModal
+            onClose={() => setShowAboutModal(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  // 2. Vue Administration du don et paramètres
+  if (currentView === 'admin') {
+    return (
+      <div className="app-container">
+        <AdminDonationPage
+          onBackToHome={navigateToLanding}
+          onBackToApp={() => navigateToApp()}
+        />
+      </div>
+    );
+  }
+
+  // 3. Vue Atelier Lexical (Application principale)
   return (
     <div className="app-container">
       <Header
@@ -204,17 +313,9 @@ export const App: React.FC = () => {
         theme={theme}
         toggleTheme={toggleTheme}
         favoritesCount={favoritesCount}
+        onNavigateHome={navigateToLanding}
         onOpenAboutModal={() => setShowAboutModal(true)}
-        onLogoClick={() => {
-          setCurrentWord('');
-          setCurrentFiche(null);
-          setErrorInfo(null);
-          setNavigationTrail([]);
-          setActiveTab('lexique');
-          const url = new URL(window.location.href);
-          url.searchParams.delete('q');
-          window.history.pushState({}, '', url.pathname);
-        }}
+        onLogoClick={navigateToLanding}
         onOpenAiModal={() => setShowAiModal(true)}
         aiStatus={aiStatus}
       />
@@ -391,7 +492,7 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      <Footer />
+      <Footer onNavigateAdmin={navigateToAdmin} />
 
       {showAiModal && (
         <AIConfigModal

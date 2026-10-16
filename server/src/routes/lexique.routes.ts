@@ -14,7 +14,7 @@ export const lexiqueRouter = Router();
  */
 lexiqueRouter.get('/lexique/:word', async (req: Request, res: Response) => {
   try {
-    const rawWord = req.params.word;
+    const rawWord = String(req.params.word || '');
     if (!rawWord || rawWord.trim().length === 0) {
       res.status(400).json({ error: 'Le paramètre de mot est requis.' });
       return;
@@ -65,7 +65,7 @@ lexiqueRouter.get('/search/suggestions', async (req: Request, res: Response) => 
  */
 lexiqueRouter.get('/conjugaison/:verb', (req: Request, res: Response) => {
   try {
-    const verb = req.params.verb;
+    const verb = String(req.params.verb || '');
     const conjugaison = conjugationService.conjuguer(verb);
     if (!conjugaison) {
       res.status(404).json({
