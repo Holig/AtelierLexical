@@ -136,3 +136,82 @@ donationRouter.delete('/admin/donation', requireAdminAuth, (_req: Request, res: 
     res.status(500).json({ error: 'Erreur lors de la réinitialisation.' });
   }
 });
+
+/**
+ * =========================================================================
+ * GESTION & ÉDITION DES PROMPTS IA (ADMINISTRATION)
+ * =========================================================================
+ */
+
+/**
+ * GET /api/admin/prompts
+ * Route protégée : consultation des prompts actuels, templates par défaut et variables
+ */
+donationRouter.get('/admin/prompts', requireAdminAuth, (_req: Request, res: Response) => {
+  try {
+    const prompts = configService.getPrompts();
+    res.json({
+      success: true,
+      prompts
+    });
+  } catch (err) {
+    console.error('Erreur récupération prompts admin:', err);
+    res.status(500).json({ error: 'Erreur lors de la récupération des prompts.' });
+  }
+});
+
+/**
+ * PUT /api/admin/prompts
+ * Route protégée : mise à jour d'un ou de plusieurs prompts personnalisés
+ */
+donationRouter.put('/admin/prompts', requireAdminAuth, (req: Request, res: Response) => {
+  try {
+    const { key, template, prompts } = req.body;
+
+    if (key && typeof template === 'string') {
+      const updateResult = configService.updatePrompt(key, template);
+      if (!updateResult.success) {
+        res.status(400).json({ error: updateResult.error });
+        return;
+      }
+    } else if (prompts && typeof prompts === 'object') {
+      const updateResult = configService.updateAllPrompts(prompts);
+      if (!updateResult.success) {
+        res.status(400).json({ error: updateResult.error });
+        return;
+      }
+    } else {
+      res.status(400).json({ error: 'Paramètres manquants : spécifiez "key" et "template" ou un dictionnaire "prompts".' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Prompt(s) mis à jour avec succès.',
+      prompts: configService.getPrompts()
+    });
+  } catch (err) {
+    console.error('Erreur mise à jour prompts admin:', err);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des prompts.' });
+  }
+});
+
+/**
+ * POST /api/admin/prompts/reset
+ * Route protégée : réinitialisation d'un prompt ciblé ou de tous les prompts aux valeurs usine
+ */
+donationRouter.post('/admin/prompts/reset', requireAdminAuth, (req: Request, res: Response) => {
+  try {
+    const { key } = req.body || {};
+    configService.resetPrompt(key);
+    res.json({
+      success: true,
+      message: key ? `Le prompt « ${key} » a été réinitialisé à sa valeur d'origine.` : 'Tous les prompts ont été réinitialisés aux valeurs par défaut.',
+      prompts: configService.getPrompts()
+    });
+  } catch (err) {
+    console.error('Erreur réinitialisation prompts admin:', err);
+    res.status(500).json({ error: 'Erreur lors de la réinitialisation des prompts.' });
+  }
+});
+

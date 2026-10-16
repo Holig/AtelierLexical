@@ -1543,6 +1543,9 @@ input, textarea, select {
 .synonyms-nuance-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-auto-rows: min-content;
+  align-content: start;
+  align-items: start;
   gap: var(--space-md);
 }
 
@@ -1557,6 +1560,9 @@ input, textarea, select {
   gap: var(--space-sm);
   transition: all var(--transition-normal);
   cursor: pointer;
+  height: fit-content;
+  min-height: 120px;
+  align-self: start;
 }
 
 .synonym-nuance-card:hover {

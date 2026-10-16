@@ -61,8 +61,6 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
     }
   };
 
-  if (!antonymes || antonymes.length === 0) return null;
-
   return (
     <div className="section-panel animate-fade-in">
       <div className="section-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
@@ -115,39 +113,74 @@ export const AntonymsSection: React.FC<AntonymsSectionProps> = ({
         </div>
       )}
 
-      <div className="chips-cloud-wrap section-scroll-content" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignContent: 'flex-start' }}>
-        {antonymes.map((ant, idx) => {
-          const isHovered = hoveredData?.mot === ant.mot;
+      {antonymes.length > 0 ? (
+        <div className="chips-cloud-wrap section-scroll-content" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignContent: 'flex-start' }}>
+          {antonymes.map((ant, idx) => {
+            const isHovered = hoveredData?.mot === ant.mot;
 
-          return (
+            return (
+              <button
+                key={`${ant.mot}-${idx}`}
+                className={`filter-chip ${isHovered ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', padding: '6px 14px' }}
+                onClick={() => {
+                  closeTooltip();
+                  onNavigateWord(ant.mot);
+                }}
+                onMouseEnter={(e) => handleWordMouseEnter({
+                  mot: ant.mot,
+                  badge: ant.type === 'contextuel' ? 'Antonyme contextuel' : 'Antonyme',
+                  note: ant.sensAssocie,
+                  estGenereIA: ant.estGenereIA
+                }, e)}
+                onMouseLeave={handleWordMouseLeave}
+              >
+                <span style={{ fontWeight: 600 }}>{ant.mot}</span>
+                {ant.estGenereIA && (
+                  <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>
+                    IA
+                  </span>
+                )}
+                {ant.type === 'contextuel' && <span className="badge" style={{ fontSize: '0.7rem' }}>contexte</span>}
+                <ArrowUpRight size={14} className="text-faint" />
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="empty-section-ai-prompt" style={{
+          padding: '24px 16px',
+          textAlign: 'center',
+          background: 'var(--bg-surface-elevated)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px dashed var(--border-medium)'
+        }}>
+          <p className="text-muted" style={{ fontSize: '0.88rem', margin: '0 0 14px 0' }}>
+            Aucun antonyme direct n'est répertorié pour ce mot dans la base lexicale.
+          </p>
+          {motPrincipal && (
             <button
-              key={`${ant.mot}-${idx}`}
-              className={`filter-chip ${isHovered ? 'active' : ''}`}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', padding: '6px 14px' }}
-              onClick={() => {
-                closeTooltip();
-                onNavigateWord(ant.mot);
-              }}
-              onMouseEnter={(e) => handleWordMouseEnter({
-                mot: ant.mot,
-                badge: ant.type === 'contextuel' ? 'Antonyme contextuel' : 'Antonyme',
-                note: ant.sensAssocie,
-                estGenereIA: ant.estGenereIA
-              }, e)}
-              onMouseLeave={handleWordMouseLeave}
+              type="button"
+              className={`btn-ai-widget-enrich ${isEnriching ? 'loading' : ''}`}
+              onClick={handleEnrichWithAi}
+              disabled={isEnriching}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', margin: '0 auto' }}
             >
-              <span style={{ fontWeight: 600 }}>{ant.mot}</span>
-              {ant.estGenereIA && (
-                <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>
-                  IA
-                </span>
+              {isEnriching ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Recherche des oppositions IA...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  <span>Compléter avec l'IA</span>
+                </>
               )}
-              {ant.type === 'contextuel' && <span className="badge" style={{ fontSize: '0.7rem' }}>contexte</span>}
-              <ArrowUpRight size={14} className="text-faint" />
             </button>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Infobulle Portal flottante avec les détails lexicaux de l'antonyme (tuile & modale) */}
       <WordHoverTooltipPortal

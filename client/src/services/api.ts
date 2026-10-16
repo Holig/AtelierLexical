@@ -9,7 +9,9 @@ import {
   ElementChampLexical,
   DonationPublicConfig,
   DonationAdminConfig,
-  AdminAuthResponse
+  AdminAuthResponse,
+  PromptKey,
+  PromptDefinition
 } from '../../../shared/types';
 
 // Cache mémoire en session pour les fiches lexicales (permet une navigation instantanée sans rechargement)
@@ -312,5 +314,74 @@ export class ApiClient {
     }
     return resData;
   }
+
+  // ==========================================
+  // Gestion & Édition des Prompts IA (Admin)
+  // ==========================================
+
+  /**
+   * Consultation de tous les prompts configurés (admin)
+   */
+  public static async getAdminPrompts(): Promise<PromptDefinition[]> {
+    const token = ApiClient.getAdminToken();
+    if (!token) throw new Error('Non authentifié');
+    const res = await fetch('/api/admin/prompts', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Erreur lors de la récupération des prompts');
+    }
+    const data = await res.json();
+    return data.prompts || [];
+  }
+
+  /**
+   * Mise à jour d'un prompt personnalisé (admin)
+   */
+  public static async updateAdminPrompt(
+    key: PromptKey,
+    template: string
+  ): Promise<{ success: boolean; prompts?: PromptDefinition[]; error?: string }> {
+    const token = ApiClient.getAdminToken();
+    if (!token) return { success: false, error: 'Non authentifié' };
+    const res = await fetch('/api/admin/prompts', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ key, template })
+    });
+    const resData = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: resData.error || 'Erreur lors de la mise à jour du prompt' };
+    }
+    return resData;
+  }
+
+  /**
+   * Réinitialisation d'un prompt au template par défaut (admin)
+   */
+  public static async resetAdminPrompt(
+    key?: PromptKey
+  ): Promise<{ success: boolean; prompts?: PromptDefinition[]; error?: string }> {
+    const token = ApiClient.getAdminToken();
+    if (!token) return { success: false, error: 'Non authentifié' };
+    const res = await fetch('/api/admin/prompts/reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ key })
+    });
+    const resData = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: resData.error || 'Erreur lors de la réinitialisation' };
+    }
+    return resData;
+  }
 }
+
 

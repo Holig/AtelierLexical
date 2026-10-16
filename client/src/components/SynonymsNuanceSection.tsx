@@ -79,9 +79,7 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
     return Array.from(set);
   }, [synonymes]);
 
-  if (!synonymes || synonymes.length === 0) {
-    return null;
-  }
+
 
   const getIntensityLabel = (lvl: Intensite): string => {
     switch (lvl) {
@@ -135,25 +133,27 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
             </button>
           )}
 
-          <button
-            type="button"
-            className="btn-toggle-filters"
-            onClick={() => setShowFilters(!showFilters)}
-            title={showFilters ? "Masquer les filtres d'intensité et de registre" : "Afficher les filtres d'intensité et de registre"}
-          >
-            <Filter size={12} />
-            <span>{showFilters ? 'Masquer filtres' : 'Filtrer nuances'}</span>
-            {(selectedIntensity !== 'all' || selectedRegister !== 'all') && (
-              <span className="active-filter-indicator">•</span>
-            )}
-            <ChevronDown
-              size={13}
-              style={{
-                transform: showFilters ? 'rotate(180deg)' : 'none',
-                transition: 'transform 0.2s'
-              }}
-            />
-          </button>
+          {synonymes.length > 0 && (
+            <button
+              type="button"
+              className="btn-toggle-filters"
+              onClick={() => setShowFilters(!showFilters)}
+              title={showFilters ? "Masquer les filtres d'intensité et de registre" : "Afficher les filtres d'intensité et de registre"}
+            >
+              <Filter size={12} />
+              <span>{showFilters ? 'Masquer filtres' : 'Filtrer nuances'}</span>
+              {(selectedIntensity !== 'all' || selectedRegister !== 'all') && (
+                <span className="active-filter-indicator">•</span>
+              )}
+              <ChevronDown
+                size={13}
+                style={{
+                  transform: showFilters ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.2s'
+                }}
+              />
+            </button>
+          )}
         </div>
       </div>
 
@@ -259,6 +259,40 @@ export const SynonymsNuanceSection: React.FC<SynonymsNuanceSectionProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      ) : synonymes.length === 0 ? (
+        <div className="empty-section-ai-prompt" style={{
+          padding: '24px 16px',
+          textAlign: 'center',
+          background: 'var(--bg-surface-elevated)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px dashed var(--border-medium)',
+          marginTop: '6px'
+        }}>
+          <p className="text-muted" style={{ fontSize: '0.88rem', margin: '0 0 14px 0' }}>
+            Aucun synonyme recensé dans la base lexicale pour ce terme.
+          </p>
+          {motPrincipal && (
+            <button
+              type="button"
+              className={`btn-ai-widget-enrich ${isEnriching ? 'loading' : ''}`}
+              onClick={handleEnrichWithAi}
+              disabled={isEnriching}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', margin: '0 auto' }}
+            >
+              {isEnriching ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Nuances en cours d'analyse...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  <span>Compléter avec l'IA</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       ) : (
         <p className="text-muted" style={{ padding: '20px 0' }}>

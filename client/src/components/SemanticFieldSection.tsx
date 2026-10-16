@@ -61,8 +61,6 @@ export const SemanticFieldSection: React.FC<SemanticFieldSectionProps> = ({
     }
   };
 
-  if (!champLexical || champLexical.length === 0) return null;
-
   return (
     <div className="section-panel animate-fade-in">
       <div className="section-panel-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
@@ -122,39 +120,74 @@ export const SemanticFieldSection: React.FC<SemanticFieldSectionProps> = ({
         </span>
       </div>
 
-      <div className="chips-cloud-wrap section-scroll-content" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignContent: 'flex-start' }}>
-        {champLexical.map((elem, idx) => {
-          const isHovered = hoveredData?.mot === elem.mot;
+      {champLexical.length > 0 ? (
+        <div className="chips-cloud-wrap section-scroll-content" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignContent: 'flex-start' }}>
+          {champLexical.map((elem, idx) => {
+            const isHovered = hoveredData?.mot === elem.mot;
 
-          return (
+            return (
+              <button
+                key={`${elem.mot}-${idx}`}
+                className={`filter-chip ${isHovered ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', fontSize: '0.9rem' }}
+                onClick={() => {
+                  closeTooltip();
+                  onNavigateWord(elem.mot);
+                }}
+                onMouseEnter={(e) => handleWordMouseEnter({
+                  mot: elem.mot,
+                  badge: elem.theme || elem.relationType || 'Champ lexical',
+                  note: elem.note,
+                  estGenereIA: elem.estGenereIA
+                }, e)}
+                onMouseLeave={handleWordMouseLeave}
+              >
+                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{elem.mot}</span>
+                {elem.estGenereIA && (
+                  <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>
+                    IA
+                  </span>
+                )}
+                {elem.note && <span style={{ fontSize: '0.75rem', color: 'var(--text-faint)' }}>({elem.note})</span>}
+                <ArrowUpRight size={14} className="text-faint" />
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="empty-section-ai-prompt" style={{
+          padding: '24px 16px',
+          textAlign: 'center',
+          background: 'var(--bg-surface-elevated)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px dashed var(--border-medium)'
+        }}>
+          <p className="text-muted" style={{ fontSize: '0.88rem', margin: '0 0 14px 0' }}>
+            Aucun terme du champ lexical n'est actuellement répertorié pour ce mot.
+          </p>
+          {motPrincipal && (
             <button
-              key={`${elem.mot}-${idx}`}
-              className={`filter-chip ${isHovered ? 'active' : ''}`}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', fontSize: '0.9rem' }}
-              onClick={() => {
-                closeTooltip();
-                onNavigateWord(elem.mot);
-              }}
-              onMouseEnter={(e) => handleWordMouseEnter({
-                mot: elem.mot,
-                badge: elem.theme || elem.relationType || 'Champ lexical',
-                note: elem.note,
-                estGenereIA: elem.estGenereIA
-              }, e)}
-              onMouseLeave={handleWordMouseLeave}
+              type="button"
+              className={`btn-ai-widget-enrich ${isEnriching ? 'loading' : ''}`}
+              onClick={handleEnrichWithAi}
+              disabled={isEnriching}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', margin: '0 auto' }}
             >
-              <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{elem.mot}</span>
-              {elem.estGenereIA && (
-                <span className="badge badge-ai-gold" style={{ fontSize: '0.65rem' }}>
-                  IA
-                </span>
+              {isEnriching ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Tissage du champ lexical...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  <span>Compléter avec l'IA</span>
+                </>
               )}
-              {elem.note && <span style={{ fontSize: '0.75rem', color: 'var(--text-faint)' }}>({elem.note})</span>}
-              <ArrowUpRight size={14} className="text-faint" />
             </button>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Infobulle flottante unifiée pour les éléments de la tuile et de la modale */}
       <WordHoverTooltipPortal

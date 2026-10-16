@@ -215,3 +215,26 @@ export interface AdminAuthResponse {
   message?: string;
 }
 
+/**
+ * Configuration & Édition des Prompts IA
+ */
+export type PromptKey =
+  | 'etymologie'
+  | 'synonymes'
+  | 'antonymes'
+  | 'champLexical'
+  | 'exemples'
+  | 'intention';
+
+export interface PromptDefinition {
+  key: PromptKey;
+  titre: string;
+  description: string;
+  variablesDisponibles: string[];
+  template: string;
+  templateDefaut: string;
+  estPersonnalise: boolean;
+}
+
+export type PromptsConfigMap = Partial<Record<PromptKey, string>>;
+

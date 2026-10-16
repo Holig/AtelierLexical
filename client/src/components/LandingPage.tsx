@@ -450,50 +450,52 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* Section 5 : Soutien au projet & Financement participatif */}
-      <section id="soutien" className="landing-section landing-section-soutien">
-        <div className="landing-container">
-          <div className="soutien-card">
-            <div className="soutien-icon-wrap">
-              <Heart size={36} fill="var(--accent-gold)" color="var(--accent-gold)" />
-            </div>
-
-            <h2 style={{ fontFamily: 'var(--font-serif-display)', fontSize: '1.8rem', color: 'var(--text-main)', margin: '0 0 12px 0' }}>
-              Faire vivre l'Atelier Lexical
-            </h2>
-
-            <p style={{ maxWidth: '620px', margin: '0 auto 24px', color: 'var(--text-muted)', lineHeight: 1.6, fontSize: '0.98rem' }}>
-              L'Atelier Lexical est un projet indépendant, artisanal et gratuit, conçu avec passion pour célébrer la précision et la beauté de la langue française. Votre soutien permet de financer les serveurs, d'enrichir le moteur de nuances et de pérenniser cette ressource ouverte.
-            </p>
-
-            {donationConfig.enabled && donationConfig.url ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                <a
-                  href={donationConfig.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-accent landing-btn-large"
-                  style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px' }}
-                >
-                  <Heart size={18} fill="currentColor" />
-                  <span>{donationConfig.label || 'Soutenir le projet'}</span>
-                  <ExternalLink size={16} />
-                </a>
-                <span className="text-faint" style={{ fontSize: '0.8rem' }}>
-                  Redirection sécurisée vers notre plateforme de financement
-                </span>
+      {/* Section 5 : Soutien au projet & Financement participatif (affiché uniquement si activé dans l'admin) */}
+      {donationConfig.enabled && (
+        <section id="soutien" className="landing-section landing-section-soutien">
+          <div className="landing-container">
+            <div className="soutien-card">
+              <div className="soutien-icon-wrap">
+                <Heart size={36} fill="var(--accent-gold)" color="var(--accent-gold)" />
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                  <ShieldCheck size={18} className="text-accent" />
-                  <span>Projet libre et ouvert — Merci à tous nos lecteurs et contributeurs.</span>
+
+              <h2 style={{ fontFamily: 'var(--font-serif-display)', fontSize: '1.8rem', color: 'var(--text-main)', margin: '0 0 12px 0' }}>
+                Faire vivre l'Atelier Lexical
+              </h2>
+
+              <p style={{ maxWidth: '620px', margin: '0 auto 24px', color: 'var(--text-muted)', lineHeight: 1.6, fontSize: '0.98rem' }}>
+                L'Atelier Lexical est un projet indépendant, artisanal et gratuit, conçu avec passion pour célébrer la précision et la beauté de la langue française. Votre soutien permet de financer les serveurs, d'enrichir le moteur de nuances et de pérenniser cette ressource ouverte.
+              </p>
+
+              {donationConfig.url ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <a
+                    href={donationConfig.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-accent landing-btn-large"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px' }}
+                  >
+                    <Heart size={18} fill="currentColor" />
+                    <span>{donationConfig.label || 'Soutenir le projet'}</span>
+                    <ExternalLink size={16} />
+                  </a>
+                  <span className="text-faint" style={{ fontSize: '0.8rem' }}>
+                    Redirection sécurisée vers notre plateforme de financement
+                  </span>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    <ShieldCheck size={18} className="text-accent" />
+                    <span>Projet libre et ouvert — Merci à tous nos lecteurs et contributeurs.</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Pied de page riche de la landing page */}
       <footer className="landing-footer">

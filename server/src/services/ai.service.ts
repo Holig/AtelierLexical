@@ -17,6 +17,7 @@ import {
 } from '../../../shared/types';
 import { nuanceService } from './nuance.service';
 import { normaliserMotRecherche } from '../utils/french';
+import { configService } from './config.service';
 
 export class AIService {
   private geminiKey: string | undefined;
@@ -356,16 +357,7 @@ export class AIService {
    * Enrichit l'étymologie et l'origine d'un mot avec l'IA
    */
   public async enrichirEtymologieIA(mot: string): Promise<{ etymologie: string; prononciation?: string }> {
-    const prompt = `Tu es un éminent philologue et lexicographe français.
-Pour le mot « ${mot} », donne une notice étymologique précise, noble et détaillée.
-Indique la racine linguistique exacte (latin, grec, francique, ancien français, arabe, etc.), le mot source avec sa signification entre guillemets et son évolution sémantique jusqu'au français moderne.
-Format d'écriture recommandé : « Du latin silentium (« action de se taire, silence »), dérivé de silere (« se taire, être tranquille »)... »
-Sois précis, scientifique et concis (2 à 3 phrases claires).
-Réponds UNIQUEMENT sous la forme d'un objet JSON strict :
-{
-  "etymologie": "Du latin...",
-  "prononciation": "..." (optionnel, notation en Alphabet Phonétique International ex: \\si.lɑ̃s\\)
-}`;
+    const prompt = configService.renderPrompt('etymologie', { mot });
 
     if (this.isAvailable()) {
       try {
@@ -400,32 +392,10 @@ Réponds UNIQUEMENT sous la forme d'un objet JSON strict :
     const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
     existantsNorm.add(normaliserMotRecherche(mot));
 
-    const prompt = `Tu es un maître de style et lexicographe littéraire français.
-Pour le mot « ${mot} », propose 6 synonymes ou équivalents nuancés de haute tenue stylistique, qui ne figurent PAS dans cette liste existante : [${existants.join(', ')}].
-
-Pour chaque synonyme :
-- "mot" : le mot ou locution
-- "nuance" : explication précise de sa nuance sémantique et de son atmosphère
-- "intensite" : entier entre 1 (légère), 2 (modérée), 3 (intense), 4 (extrême)
-- "registre" : "littéraire" | "soutenu" | "courant" | "familier"
-- "connotation" : "positive" | "neutre" | "sombre" | "méliorative" | "péjorative"
-- "contexteConseille" : conseil d'écriture concret pour l'auteur
-- "exemple" : une belle phrase littéraire originale illustrant son usage
-
-Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "synonymes" :
-{
-  "synonymes": [
-    {
-      "mot": "...",
-      "nuance": "...",
-      "intensite": 2,
-      "registre": "littéraire",
-      "connotation": "positive",
-      "contexteConseille": "...",
-      "exemple": "..."
-    }
-  ]
-}`;
+    const prompt = configService.renderPrompt('synonymes', {
+      mot,
+      existants: existants.length > 0 ? existants.join(', ') : 'aucun'
+    });
 
     let resultat: SynonymeNuance[] = [];
     if (this.isAvailable()) {
@@ -471,24 +441,10 @@ Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "synonymes" :
     const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
     existantsNorm.add(normaliserMotRecherche(mot));
 
-    const prompt = `Tu es un linguiste et auteur littéraire francophone.
-Pour le mot « ${mot} », propose 6 antonymes ou oppositions dramatiques/stylistiques fortes, qui ne figurent PAS dans : [${existants.join(', ')}].
-
-Pour chaque antonyme :
-- "mot" : le mot ou la locution opposée
-- "sensAssocie" : explication courte de la rupture ou du contraste
-- "type" : "direct" ou "contextuel"
-
-Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "antonymes" :
-{
-  "antonymes": [
-    {
-      "mot": "...",
-      "sensAssocie": "...",
-      "type": "direct"
-    }
-  ]
-}`;
+    const prompt = configService.renderPrompt('antonymes', {
+      mot,
+      existants: existants.length > 0 ? existants.join(', ') : 'aucun'
+    });
 
     let resultat: Antonyme[] = [];
     if (this.isAvailable()) {
@@ -529,26 +485,10 @@ Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "antonymes" :
     const existantsNorm = new Set(existants.map(e => normaliserMotRecherche(e)));
     existantsNorm.add(normaliserMotRecherche(mot));
 
-    const prompt = `Tu es un poète et styliste pour auteurs de fiction.
-Pour le mot « ${mot} », propose 8 à 10 termes évocateurs de son champ lexical, sensoriel et symbolique, qui ne figurent PAS dans : [${existants.join(', ')}].
-
-Pour chaque terme :
-- "mot" : le terme évocateur
-- "theme" : univers ou ambiance
-- "relationType" : "thématique" | "sensoriel" | "association_libre"
-- "note" : brève suggestion d'écriture
-
-Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "champLexical" :
-{
-  "champLexical": [
-    {
-      "mot": "...",
-      "theme": "...",
-      "relationType": "sensoriel",
-      "note": "..."
-    }
-  ]
-}`;
+    const prompt = configService.renderPrompt('champLexical', {
+      mot,
+      existants: existants.length > 0 ? existants.join(', ') : 'aucun'
+    });
 
     let resultat: ElementChampLexical[] = [];
     if (this.isAvailable()) {
@@ -590,17 +530,10 @@ Réponds UNIQUEMENT sous forme d'un objet JSON contenant la clé "champLexical" 
     categorie: string = 'nom',
     registre: string = 'littéraire'
   ): Promise<ExempleUsage[]> {
-    const prompt = `Tu es un maître de style littéraire français de haute volée. Pour le mot "${mot}", génère 4 phrases d'exemple distinctes et inspirantes (1 narrative, 1 descriptive, 1 de dialogue, 1 poétique) dans un registre ${registre}.
-Respecte scrupuleusement le sens du mot sans contresens.
-Réponds uniquement au format JSON valide contenant la clé "exemples" :
-{
-  "exemples": [
-    {"texte": "phrase narrative...", "type": "narratif"},
-    {"texte": "phrase descriptive...", "type": "descriptif"},
-    {"texte": "phrase dialoguée...", "type": "dialogue"},
-    {"texte": "phrase poétique...", "type": "poétique"}
-  ]
-}`;
+    const prompt = configService.renderPrompt('exemples', {
+      mot,
+      registre
+    });
 
     if (this.isAvailable()) {
       try {
@@ -648,26 +581,12 @@ Réponds uniquement au format JSON valide contenant la clé "exemples" :
   public async analyserIntentionStylistique(intention: IntentionRecherche): Promise<ReponseAtelierStylistique> {
     if (this.isAvailable()) {
       try {
-        const prompt = `Tu es un assistant de style pour écrivains de langue française.
-L'auteur a pour intention d'écriture : "${intention.idee}".
-Émotion : "${intention.emotion || 'non spécifiée'}". Contexte : "${intention.contexteNarratif || 'général'}". Registre : "${intention.registre || 'littéraire'}".
-Propose 4 mots ou locutions en français parfaitement ciblés avec nuance distinctive, registre, intensité (1 à 4) et un exemple littéraire marquant.
-Réponds uniquement en JSON valide conforme à cette structure :
-{
-  "intentionReformulee": "...",
-  "conseilStylistique": "...",
-  "motsProposes": [
-    {
-      "mot": "...",
-      "categorie": "nom|verbe|adjectif",
-      "pourquoiCeMot": "...",
-      "nuanceDistinctive": "...",
-      "intensite": 1,
-      "registre": "littéraire|soutenu|courant",
-      "exemplePhrase": "..."
-    }
-  ]
-}`;
+        const prompt = configService.renderPrompt('intention', {
+          idee: intention.idee || '',
+          emotion: intention.emotion || 'non spécifiée',
+          contexteNarratif: intention.contexteNarratif || 'général',
+          registre: intention.registre || 'littéraire'
+        });
 
         const rawText = await this.executerRequeteIA(prompt, true);
         if (rawText) {

@@ -397,25 +397,23 @@ export const LexicalCard: React.FC<LexicalCardProps> = ({
       <div className={`lexical-sections-grid cols-${columns}`}>
         <DefinitionsSection definitions={fiche.definitions} />
 
-        {((fiche.synonymes && fiche.synonymes.length > 0) || (fiche.antonymes && fiche.antonymes.length > 0)) && (
-          <div className="synonyms-antonyms-stack">
-            <SynonymsNuanceSection
-              synonymes={fiche.synonymes}
-              onNavigateWord={onNavigateWord}
-              motPrincipal={fiche.mot}
-              onEnrichirSynonymes={handleEnrichirSynonymes}
-              onOpenAiModal={onOpenAiModal}
-            />
+        <div className="synonyms-antonyms-stack">
+          <SynonymsNuanceSection
+            synonymes={fiche.synonymes || []}
+            onNavigateWord={onNavigateWord}
+            motPrincipal={fiche.mot}
+            onEnrichirSynonymes={handleEnrichirSynonymes}
+            onOpenAiModal={onOpenAiModal}
+          />
 
-            <AntonymsSection
-              antonymes={fiche.antonymes}
-              onNavigateWord={onNavigateWord}
-              motPrincipal={fiche.mot}
-              onEnrichirAntonymes={handleEnrichirAntonymes}
-              onOpenAiModal={onOpenAiModal}
-            />
-          </div>
-        )}
+          <AntonymsSection
+            antonymes={fiche.antonymes || []}
+            onNavigateWord={onNavigateWord}
+            motPrincipal={fiche.mot}
+            onEnrichirAntonymes={handleEnrichirAntonymes}
+            onOpenAiModal={onOpenAiModal}
+          />
+        </div>
 
         <LexicalFamilySection
           famille={fiche.familleLexicale}
